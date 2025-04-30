@@ -40,7 +40,7 @@ import {
   Eye,
   FileText
 } from 'lucide-react';
-import userData from '../data.json';
+import sampleData from '@/utils/data';
 
 const UserManagement = () => {
   const { user } = useAuth();
@@ -64,9 +64,9 @@ const UserManagement = () => {
   });
 
   useEffect(() => {
-    // Load users from the JSON data
-    setUsers(userData.users || []);
-    setFilteredUsers(userData.users || []);
+    // Load users from the sample data
+    setUsers(sampleData.users || []);
+    setFilteredUsers(sampleData.users || []);
   }, []);
 
   useEffect(() => {
@@ -148,6 +148,28 @@ const UserManagement = () => {
       default: return 'bg-gray-100 text-gray-800';
     }
   };
+
+  // Add the filter function that was omitted above
+  useEffect(() => {
+    let filtered = [...users];
+    
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(user => 
+        user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    // Filter by user type
+    if (userType !== 'all') {
+      filtered = filtered.filter(user => user.user_type === userType);
+    }
+    
+    setFilteredUsers(filtered);
+  }, [searchTerm, userType, users]);
 
   return (
     <DashboardLayout title="User Management">
@@ -371,7 +393,7 @@ const UserManagement = () => {
                     <SelectValue placeholder="Select branch" />
                   </SelectTrigger>
                   <SelectContent>
-                    {userData.branches?.map(branch => (
+                    {sampleData.branches?.map(branch => (
                       <SelectItem key={branch.id} value={String(branch.id)}>
                         {branch.name}
                       </SelectItem>
@@ -446,7 +468,7 @@ const UserManagement = () => {
                 {selectedUser.branch && (
                   <div>
                     <h3 className="text-sm font-medium text-gray-500">Branch</h3>
-                    <p>{userData.branches?.find(b => b.id === selectedUser.branch)?.name || 'Unknown Branch'}</p>
+                    <p>{sampleData.branches?.find(b => b.id === selectedUser.branch)?.name || 'Unknown Branch'}</p>
                   </div>
                 )}
                 
@@ -470,9 +492,9 @@ const UserManagement = () => {
                     Policy Information
                   </h3>
                   
-                  {userData.policy_holders?.filter(policy => 
-                    userData.customers?.find(c => 
-                      c.user === selectedUser.id && c.id === policy.customer?.id
+                  {sampleData.policy_holders?.filter(policy => 
+                    sampleData.customers?.find(c => 
+                      c.user_details?.id === selectedUser.id && c.id === policy.customer?.id
                     )
                   ).length > 0 ? (
                     <Table>
@@ -485,9 +507,9 @@ const UserManagement = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {userData.policy_holders?.filter(policy => 
-                          userData.customers?.find(c => 
-                            c.user === selectedUser.id && c.id === policy.customer?.id
+                        {sampleData.policy_holders?.filter(policy => 
+                          sampleData.customers?.find(c => 
+                            c.user_details?.id === selectedUser.id && c.id === policy.customer?.id
                           )
                         ).map(policy => (
                           <TableRow key={policy.id}>
@@ -513,16 +535,16 @@ const UserManagement = () => {
               {selectedUser.user_type === 'agent' && (
                 <div>
                   <h3 className="font-medium">Agent Information</h3>
-                  {userData.sales_agents?.find(agent => agent.application?.user === selectedUser.id) ? (
+                  {sampleData.sales_agents?.find(agent => agent.application?.user === selectedUser.id) ? (
                     <div className="bg-gray-50 p-4 rounded-lg mt-2">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <h4 className="text-sm font-medium text-gray-500">Agent Code</h4>
-                          <p>{userData.sales_agents.find(agent => agent.application?.user === selectedUser.id)?.agent_code}</p>
+                          <p>{sampleData.sales_agents.find(agent => agent.application?.user === selectedUser.id)?.agent_code}</p>
                         </div>
                         <div>
                           <h4 className="text-sm font-medium text-gray-500">Commission Rate</h4>
-                          <p>{userData.sales_agents.find(agent => agent.application?.user === selectedUser.id)?.commission_rate}%</p>
+                          <p>{sampleData.sales_agents.find(agent => agent.application?.user === selectedUser.id)?.commission_rate}%</p>
                         </div>
                       </div>
                     </div>

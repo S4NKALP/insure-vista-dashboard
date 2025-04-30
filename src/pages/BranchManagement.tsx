@@ -35,7 +35,7 @@ import {
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import branchData from '../data.json';
+import sampleData from '@/utils/data';
 
 const BranchManagement = () => {
   const { user } = useAuth();
@@ -53,9 +53,9 @@ const BranchManagement = () => {
   });
 
   useEffect(() => {
-    // Load branches from the JSON data
-    setBranches(branchData.branches || []);
-    setFilteredBranches(branchData.branches || []);
+    // Load branches from the sample data
+    setBranches(sampleData.branches || []);
+    setFilteredBranches(sampleData.branches || []);
   }, []);
 
   useEffect(() => {
@@ -85,7 +85,7 @@ const BranchManagement = () => {
     const branchToAdd = {
       ...newBranch,
       id: newBranchId,
-      company_name: branchData.companies?.find(c => c.id === newBranch.company)?.name || 'Unknown Company'
+      company_name: sampleData.companies?.[0]?.name || 'Easy Life Insurance LTD.'
     };
     
     setBranches([...branches, branchToAdd]);
@@ -106,17 +106,17 @@ const BranchManagement = () => {
   };
 
   const getBranchStats = (branchId) => {
-    const customers = branchData.customers?.filter(c => 
-      branchData.policy_holders?.some(p => p.branch?.id === branchId && p.customer?.id === c.id)
+    const customers = sampleData.customers?.filter(c => 
+      sampleData.policy_holders?.some(p => p.branch?.id === branchId && p.customer?.id === c.id)
     ) || [];
     
-    const policies = branchData.policy_holders?.filter(p => p.branch?.id === branchId) || [];
+    const policies = sampleData.policy_holders?.filter(p => p.branch?.id === branchId) || [];
     
-    const agents = branchData.sales_agents?.filter(a => a.branch === branchId) || [];
+    const agents = sampleData.sales_agents?.filter(a => a.branch === branchId) || [];
     
     const totalPremium = policies.reduce((total, policy) => {
-      const premiumPayment = branchData.premium_payments?.find(pp => pp.policy_holder === policy.id);
-      return total + (premiumPayment ? parseFloat(premiumPayment.total_paid) : 0);
+      // Since we don't have premium_payments in our simplified data, we'll use a placeholder calculation
+      return total + (parseFloat(policy.sum_assured) * 0.05); // 5% of sum assured as premium
     }, 0);
     
     return {
@@ -242,7 +242,7 @@ const BranchManagement = () => {
                 <Label htmlFor="company">Company *</Label>
                 <Input 
                   id="company" 
-                  value={branchData.companies?.[0]?.name || 'Easy Life Insurance LTD.'}
+                  value={sampleData.companies?.[0]?.name || 'Easy Life Insurance LTD.'}
                   disabled
                 />
               </div>
@@ -406,12 +406,12 @@ const BranchManagement = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {branchData.sales_agents?.filter(agent => agent.branch === selectedBranch.id).map(agent => (
+                      {sampleData.sales_agents?.filter(agent => agent.branch === selectedBranch.id).map(agent => (
                         <TableRow key={agent.id}>
                           <TableCell>{agent.agent_name}</TableCell>
                           <TableCell>{agent.agent_code}</TableCell>
                           <TableCell>
-                            <Badge variant={agent.is_active ? "default" : "outline"}>
+                            <Badge variant={agent.status === 'ACTIVE' ? "default" : "outline"}>
                               {agent.status}
                             </Badge>
                           </TableCell>
@@ -419,7 +419,7 @@ const BranchManagement = () => {
                           <TableCell>{agent.commission_rate}%</TableCell>
                         </TableRow>
                       ))}
-                      {(branchData.sales_agents?.filter(agent => agent.branch === selectedBranch.id).length === 0) && (
+                      {(sampleData.sales_agents?.filter(agent => agent.branch === selectedBranch.id).length === 0) && (
                         <TableRow>
                           <TableCell colSpan={5} className="h-24 text-center">
                             No agents found for this branch.
@@ -482,7 +482,7 @@ const BranchManagement = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {branchData.agent_reports?.filter(report => report.branch === selectedBranch.id).map(report => (
+                      {sampleData.agent_reports?.filter(report => report.branch === selectedBranch.id).map(report => (
                         <TableRow key={report.id}>
                           <TableCell>{report.agent_name}</TableCell>
                           <TableCell>{report.reporting_period}</TableCell>
@@ -491,7 +491,7 @@ const BranchManagement = () => {
                           <TableCell>Rs. {parseFloat(report.commission_earned).toLocaleString()}</TableCell>
                         </TableRow>
                       ))}
-                      {(branchData.agent_reports?.filter(report => report.branch === selectedBranch.id).length === 0) && (
+                      {(sampleData.agent_reports?.filter(report => report.branch === selectedBranch.id).length === 0) && (
                         <TableRow>
                           <TableCell colSpan={5} className="h-24 text-center">
                             No agent reports found for this branch.
