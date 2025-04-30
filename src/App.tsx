@@ -12,6 +12,8 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import UserManagement from "./pages/UserManagement";
 import BranchManagement from "./pages/BranchManagement";
+import PolicyManagement from "./pages/PolicyManagement";
+import PolicyHolderManagement from "./pages/PolicyHolderManagement";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 
@@ -46,8 +48,11 @@ const App = () => (
             <Route path="/branches" element={<PrivateRoute allowedRoles={['superadmin']}><BranchManagement /></PrivateRoute>} />
             <Route path="/settings" element={<PrivateRoute allowedRoles={['superadmin']}><Dashboard /></PrivateRoute>} />
             
+            {/* Policy Management Routes */}
+            <Route path="/policies" element={<PrivateRoute><PolicyManagement /></PrivateRoute>} />
+            <Route path="/policy-holders" element={<PrivateRoute allowedRoles={['superadmin', 'branch']}><PolicyHolderManagement /></PrivateRoute>} />
+            
             {/* Shared Routes */}
-            <Route path="/policies" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
             <Route path="/claims" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
             <Route path="/reports" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
             <Route path="/payments" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
@@ -55,7 +60,6 @@ const App = () => (
             {/* Branch Admin Routes */}
             <Route path="/customers" element={<PrivateRoute allowedRoles={['branch']}><UserManagement /></PrivateRoute>} />
             <Route path="/agents" element={<PrivateRoute allowedRoles={['branch']}><Dashboard /></PrivateRoute>} />
-            <Route path="/policy-holders" element={<PrivateRoute allowedRoles={['branch']}><Dashboard /></PrivateRoute>} />
             <Route path="/loans" element={<PrivateRoute allowedRoles={['branch']}><Dashboard /></PrivateRoute>} />
             
             {/* Error Pages */}
