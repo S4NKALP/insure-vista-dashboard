@@ -23,9 +23,9 @@ export const UnderwritingDetails = ({ policyHolderId }: UnderwritingDetailsProps
   const getRiskBadgeVariant = (category: string) => {
     switch (category?.toLowerCase()) {
       case 'low':
-        return 'success';
+        return 'default';
       case 'moderate':
-        return 'warning';
+        return 'secondary';
       case 'high':
         return 'destructive';
       default:

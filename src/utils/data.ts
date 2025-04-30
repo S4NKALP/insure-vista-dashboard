@@ -1,4 +1,3 @@
-
 // This file provides access to the sample data that would normally come from an API
 // We're defining the data structure types and exporting the data
 
@@ -80,6 +79,26 @@ export interface PolicyHolder {
   };
   policy?: Policy;
   branch?: Branch;
+  // Additional properties from data.json
+  date_of_birth?: string;
+  age?: number;
+  phone_number?: string;
+  emergency_contact_name?: string;
+  emergency_contact_number?: string | null;
+  nominee_name?: string;
+  nominee_document_type?: string;
+  nominee_document_number?: number;
+  nominee_relation?: string;
+  include_adb?: boolean;
+  include_ptd?: boolean;
+  health_history?: string | null;
+  habits?: string | null;
+  exercise_frequency?: string;
+  alcoholic?: boolean;
+  smoker?: boolean;
+  family_medical_history?: string;
+  yearly_income?: string;
+  assets_details?: string;
 }
 
 export interface SalesAgent {
@@ -109,6 +128,42 @@ export interface AgentReport {
   branch: number;
 }
 
+export interface MortalityRate {
+  id: number;
+  age_group_start: number;
+  age_group_end: number;
+  rate: string;
+}
+
+export interface GSVRate {
+  id: number;
+  min_year: number;
+  max_year: number;
+  rate: string;
+  policy: number;
+}
+
+export interface SSVConfig {
+  min_year: number;
+  max_year: number;
+  factor: string;
+  eligibility_years: string;
+  policy: number;
+}
+
+export interface UnderwritingData {
+  id: number;
+  policy_holder_number: string;
+  customer_name: string;
+  risk_assessment_score: string;
+  risk_category: string;
+  manual_override: boolean;
+  remarks: string | null;
+  last_updated_by: string;
+  last_updated_at: string;
+  policy_holder: number;
+}
+
 export interface Company {
   id: number;
   name: string;
@@ -120,8 +175,24 @@ export interface Company {
   phone_number: string;
 }
 
+// Exported data structure with all the necessary properties
+export interface SampleDataType {
+  users: User[];
+  companies: Company[];
+  branches: Branch[];
+  insurance_policies: Policy[];
+  customers: Customer[];
+  policy_holders: PolicyHolder[];
+  sales_agents: SalesAgent[];
+  agent_reports: AgentReport[];
+  mortality_rates: MortalityRate[];
+  gsv_rates: GSVRate[];
+  ssv_configs: SSVConfig[];
+  underwriting: UnderwritingData[];
+}
+
 // Sample data that would normally come from an API
-export const sampleData = {
+export const sampleData: SampleDataType = {
   users: [
     {
       id: 3,
@@ -451,6 +522,78 @@ export const sampleData = {
       total_premium: "393125.00",
       commission_earned: "52031.25",
       branch: 1
+    }
+  ],
+  mortality_rates: [
+    {
+      id: 1,
+      age_group_start: 18,
+      age_group_end: 25,
+      rate: "0.25"
+    }
+  ],
+  gsv_rates: [
+    {
+      id: 1,
+      min_year: 2,
+      max_year: 5,
+      rate: "35.00",
+      policy: 1
+    },
+    {
+      id: 2,
+      min_year: 6,
+      max_year: 8,
+      rate: "45.00",
+      policy: 1
+    },
+    {
+      id: 3,
+      min_year: 9,
+      max_year: 13,
+      rate: "60.00",
+      policy: 1
+    },
+    {
+      id: 4,
+      min_year: 14,
+      max_year: 18,
+      rate: "75.00",
+      policy: 1
+    },
+    {
+      id: 5,
+      min_year: 19,
+      max_year: 25,
+      rate: "90.00",
+      policy: 1
+    }
+  ],
+  ssv_configs: [],
+  underwriting: [
+    {
+      id: 1,
+      policy_holder_number: "1751451440001",
+      customer_name: "Nur Pratap Karki",
+      risk_assessment_score: "15.00",
+      risk_category: "Low",
+      manual_override: false,
+      remarks: null,
+      last_updated_by: "System",
+      last_updated_at: "2025-04-29T17:11:23.570339Z",
+      policy_holder: 1
+    },
+    {
+      id: 2,
+      policy_holder_number: "1751451440002",
+      customer_name: "Sumitra Bam",
+      risk_assessment_score: "50.00",
+      risk_category: "Moderate",
+      manual_override: false,
+      remarks: null,
+      last_updated_by: "System",
+      last_updated_at: "2025-04-30T05:05:03.357743Z",
+      policy_holder: 2
     }
   ]
 };

@@ -30,11 +30,11 @@ export const PolicyHolderList = ({ searchTerm, onSelectPolicyHolder }: PolicyHol
   const getStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase()) {
       case 'active':
-        return 'success';
-      case 'pending':
-        return 'warning';
-      case 'expired':
         return 'default';
+      case 'pending':
+        return 'secondary';
+      case 'expired':
+        return 'outline';
       default:
         return 'secondary';
     }
@@ -43,9 +43,9 @@ export const PolicyHolderList = ({ searchTerm, onSelectPolicyHolder }: PolicyHol
   const getPaymentStatusBadgeVariant = (status: string) => {
     switch (status.toLowerCase().replace(' ', '-')) {
       case 'paid':
-        return 'success';
+        return 'default';
       case 'partially-paid':
-        return 'warning';
+        return 'secondary';
       case 'unpaid':
         return 'destructive';
       default:
