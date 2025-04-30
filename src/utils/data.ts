@@ -1,3 +1,4 @@
+
 // This file provides access to the sample data that would normally come from an API
 // We're defining the data structure types and exporting the data
 
@@ -15,6 +16,11 @@ export interface User {
   created_at: string;
   updated_at: string;
   branch?: number | null;
+  // Adding password property to User type since it's used in the data
+  password?: string;
+  last_login?: string;
+  is_superuser?: boolean;
+  is_staff?: boolean;
 }
 
 export interface Branch {
@@ -77,8 +83,8 @@ export interface PolicyHolder {
     id: number;
     user: number;
   };
-  policy?: Policy;
-  branch?: Branch;
+  policy?: Partial<Policy>;
+  branch?: Partial<Branch>;
   // Additional properties from data.json
   date_of_birth?: string;
   age?: number;
@@ -376,6 +382,7 @@ export const sampleData: SampleDataType = {
         created_at: "2025-04-29T08:06:48.281645Z",
         updated_at: "2025-04-29T08:42:36.818497Z",
         branch: null,
+        password: "!t9x3sE3qcC8wSHF53yTzMT1aoWgZzFJntR9qIWnd"
       },
       created_at: "2025-04-29T08:06:48.280529Z",
       updated_at: "2025-04-29T17:11:23.548474Z"
@@ -459,12 +466,46 @@ export const sampleData: SampleDataType = {
         name: "Saral Jiwan Beema",
         policy_code: "144",
         policy_type: "Endownment",
+        base_multiplier: "1.00",
+        min_sum_assured: "25000.00",
+        max_sum_assured: "5000000.00",
+        include_adb: true,
+        include_ptd: true,
+        adb_percentage: "0.50",
+        ptd_percentage: "0.50",
+        description: "",
+        created_at: "2025-04-29T17:05:18.881681Z",
+        guaranteed_interest_rate: "0.0450",
+        terminal_bonus_rate: "0.1000"
       },
       branch: {
         id: 1,
         name: "Kohalpur Branch",
         branch_code: 145,
-      }
+        location: "Kohalpur 10- Banke",
+        company: 1,
+        company_name: "Easy Life Insurance LTD."
+      },
+      // Additional properties for this policy holder
+      date_of_birth: "1990-05-15",
+      age: 35,
+      phone_number: "9840693765",
+      emergency_contact_name: "Ram Karki",
+      emergency_contact_number: "9812345678",
+      nominee_name: "Rupa Karki",
+      nominee_document_type: "Citizenship",
+      nominee_document_number: 123456789,
+      nominee_relation: "Spouse",
+      include_adb: true,
+      include_ptd: true,
+      health_history: "No major health issues",
+      habits: "Regular exercise",
+      exercise_frequency: "3-4 times a week",
+      alcoholic: false,
+      smoker: false,
+      family_medical_history: "No major genetic disorders",
+      yearly_income: "1500000",
+      assets_details: "Owns a house and a car"
     },
     {
       id: 2,
@@ -487,12 +528,46 @@ export const sampleData: SampleDataType = {
         name: "Saral Jiwan Beema",
         policy_code: "144",
         policy_type: "Endownment",
+        base_multiplier: "1.00",
+        min_sum_assured: "25000.00",
+        max_sum_assured: "5000000.00",
+        include_adb: true,
+        include_ptd: true,
+        adb_percentage: "0.50",
+        ptd_percentage: "0.50",
+        description: "",
+        created_at: "2025-04-29T17:05:18.881681Z",
+        guaranteed_interest_rate: "0.0450",
+        terminal_bonus_rate: "0.1000"
       },
       branch: {
         id: 1,
         name: "Kohalpur Branch",
         branch_code: 145,
-      }
+        location: "Kohalpur 10- Banke",
+        company: 1,
+        company_name: "Easy Life Insurance LTD."
+      },
+      // Additional properties for this policy holder
+      date_of_birth: "1985-08-22",
+      age: 40,
+      phone_number: "9876543210",
+      emergency_contact_name: "Prakash Bam",
+      emergency_contact_number: "9811223344",
+      nominee_name: "Prakash Bam",
+      nominee_document_type: "Citizenship",
+      nominee_document_number: 987654321,
+      nominee_relation: "Spouse",
+      include_adb: true,
+      include_ptd: false,
+      health_history: "Hypertension",
+      habits: "Reading",
+      exercise_frequency: "1-2 times a week",
+      alcoholic: true,
+      smoker: true,
+      family_medical_history: "History of diabetes",
+      yearly_income: "1200000",
+      assets_details: "Owns farmland"
     }
   ],
   sales_agents: [
