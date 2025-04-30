@@ -10,6 +10,8 @@ import PrivateRoute from "./components/PrivateRoute";
 // Pages
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import UserManagement from "./pages/UserManagement";
+import BranchManagement from "./pages/BranchManagement";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 
@@ -40,9 +42,8 @@ const App = () => (
             />
             
             {/* Superadmin Routes */}
-            <Route path="/companies" element={<PrivateRoute allowedRoles={['superadmin']}><Dashboard /></PrivateRoute>} />
-            <Route path="/branches" element={<PrivateRoute allowedRoles={['superadmin']}><Dashboard /></PrivateRoute>} />
-            <Route path="/users" element={<PrivateRoute allowedRoles={['superadmin']}><Dashboard /></PrivateRoute>} />
+            <Route path="/users" element={<PrivateRoute allowedRoles={['superadmin', 'branch']}><UserManagement /></PrivateRoute>} />
+            <Route path="/branches" element={<PrivateRoute allowedRoles={['superadmin']}><BranchManagement /></PrivateRoute>} />
             <Route path="/settings" element={<PrivateRoute allowedRoles={['superadmin']}><Dashboard /></PrivateRoute>} />
             
             {/* Shared Routes */}
@@ -52,7 +53,7 @@ const App = () => (
             <Route path="/payments" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
             
             {/* Branch Admin Routes */}
-            <Route path="/customers" element={<PrivateRoute allowedRoles={['branch']}><Dashboard /></PrivateRoute>} />
+            <Route path="/customers" element={<PrivateRoute allowedRoles={['branch']}><UserManagement /></PrivateRoute>} />
             <Route path="/agents" element={<PrivateRoute allowedRoles={['branch']}><Dashboard /></PrivateRoute>} />
             <Route path="/policy-holders" element={<PrivateRoute allowedRoles={['branch']}><Dashboard /></PrivateRoute>} />
             <Route path="/loans" element={<PrivateRoute allowedRoles={['branch']}><Dashboard /></PrivateRoute>} />
