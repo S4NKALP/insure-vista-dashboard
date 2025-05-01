@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -27,7 +26,7 @@ export const SideNavbar: React.FC<SideNavbarProps> = ({ collapsed }) => {
   
   const superadminLinks = [
     { path: '/dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
-    { path: '/companies', icon: <Building size={20} />, label: 'Companies' },
+    { path: '/agents', icon: <User size={20} />, label: 'Agents' },
     { path: '/branches', icon: <Building size={20} />, label: 'Branches' },
     { path: '/users', icon: <Users size={20} />, label: 'Users' },
     { path: '/policies', icon: <FileText size={20} />, label: 'Policies' },

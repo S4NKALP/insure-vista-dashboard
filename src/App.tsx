@@ -16,6 +16,7 @@ import PolicyHolderManagement from "./pages/PolicyHolderManagement";
 import Reports from "./pages/Reports";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
+import AgentManagement from "./pages/AgentManagement";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,7 @@ const App = () => (
             <Route path="/users" element={<PrivateRoute allowedRoles={['superadmin', 'branch']}><UserManagement /></PrivateRoute>} />
             <Route path="/branches" element={<PrivateRoute allowedRoles={['superadmin']}><BranchManagement /></PrivateRoute>} />
             <Route path="/settings" element={<PrivateRoute allowedRoles={['superadmin']}><Dashboard /></PrivateRoute>} />
+            <Route path="/agents" element={<PrivateRoute allowedRoles={['superadmin', 'branch']}><AgentManagement /></PrivateRoute>} />
             
             {/* Policy Management Routes */}
             <Route path="/policies" element={<PrivateRoute><PolicyManagement /></PrivateRoute>} />
@@ -58,7 +60,6 @@ const App = () => (
             
             {/* Branch Admin Routes */}
             <Route path="/customers" element={<PrivateRoute allowedRoles={['branch']}><UserManagement /></PrivateRoute>} />
-            <Route path="/agents" element={<PrivateRoute allowedRoles={['branch']}><Dashboard /></PrivateRoute>} />
             <Route path="/loans" element={<PrivateRoute allowedRoles={['branch']}><Dashboard /></PrivateRoute>} />
             
             {/* Error Pages */}
