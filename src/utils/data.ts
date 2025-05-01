@@ -1,4 +1,3 @@
-
 // This file provides access to the sample data that would normally come from an API
 // We're defining the data structure types and exporting the data
 
@@ -672,5 +671,66 @@ export const sampleData: SampleDataType = {
     }
   ]
 };
+
+// Add mock claims data
+export const mockClaims = [
+  {
+    id: '1',
+    claimId: '2',
+    policyNumber: '17514514140001',
+    customerName: 'Nur Pratap Karki',
+    branchName: 'Kohalpur Branch',
+    reason: 'Death',
+    amount: 5000000,
+    filedDate: '2024-03-15',
+    reviewDate: '2024-03-20',
+    status: 'Pending',
+    description: 'Claim filed by beneficiary following policyholder death on March 10, 2024.',
+    documentIds: ['doc1', 'doc2', 'doc3']
+  },
+  {
+    id: '2',
+    claimId: '3',
+    policyNumber: '17514514140003',
+    customerName: 'Sunita Gurung',
+    branchName: 'Pokhara Branch',
+    reason: 'Medical',
+    amount: 250000,
+    filedDate: '2024-03-25',
+    reviewDate: '2024-03-30',
+    status: 'Approved',
+    description: 'Medical claim for hospitalization due to heart condition.',
+    documentIds: ['doc4', 'doc5']
+  },
+  {
+    id: '3',
+    claimId: '4',
+    policyNumber: '17514514140002',
+    customerName: 'Amit Thapa',
+    branchName: 'Kathmandu Branch',
+    reason: 'Accident',
+    amount: 175000,
+    filedDate: '2024-03-10',
+    reviewDate: '2024-03-12',
+    status: 'Processing',
+    description: 'Claim for injuries sustained in a road accident.',
+    documentIds: ['doc6', 'doc7']
+  },
+  {
+    id: '4',
+    claimId: '5',
+    policyNumber: '17514514140004',
+    customerName: 'Rajesh Patel',
+    branchName: 'Butwal Branch',
+    reason: 'Critical Illness',
+    amount: 450000,
+    filedDate: '2024-02-28',
+    reviewDate: '2024-03-05',
+    status: 'Rejected',
+    description: 'Claim rejected due to pre-existing condition not disclosed during policy purchase.',
+    documentIds: ['doc8'],
+    rejectionReason: 'Pre-existing condition was not disclosed during policy purchase'
+  }
+];
 
 export default sampleData;
