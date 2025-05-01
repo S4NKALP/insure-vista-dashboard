@@ -14,6 +14,7 @@ import UserManagement from "./pages/UserManagement";
 import BranchManagement from "./pages/BranchManagement";
 import PolicyManagement from "./pages/PolicyManagement";
 import PolicyHolderManagement from "./pages/PolicyHolderManagement";
+import Reports from "./pages/Reports";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
 
@@ -54,7 +55,7 @@ const App = () => (
             
             {/* Shared Routes */}
             <Route path="/claims" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-            <Route path="/reports" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+            <Route path="/reports" element={<PrivateRoute><Reports /></PrivateRoute>} />
             <Route path="/payments" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
             
             {/* Branch Admin Routes */}
