@@ -26,8 +26,9 @@ export const AgentApplicationDetails = ({ application }: AgentApplicationDetails
             <Badge 
               variant={
                 application.status === 'pending' ? "default" : 
-                application.status === 'approved' ? "success" : "destructive"
+                application.status === 'approved' ? "outline" : "destructive"
               }
+              className={application.status === 'approved' ? "bg-green-100 text-green-800 hover:bg-green-200" : ""}
             >
               {application.status === 'pending' ? 'Pending' : 
                application.status === 'approved' ? 'Approved' : 'Rejected'}
