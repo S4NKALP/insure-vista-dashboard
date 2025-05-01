@@ -5,7 +5,7 @@ import { StatsCard } from '@/components/dashboard/StatsCard';
 import { BranchKPIsChart } from './charts/BranchKPIsChart';
 import { AgentPerformanceChart } from './charts/AgentPerformanceChart';
 import { TopPoliciesTable } from './tables/TopPoliciesTable';
-import { branches } from '@/utils/data';
+import { sampleData } from '@/utils/data';
 import { FileText, Users, CreditCard, User } from 'lucide-react';
 
 interface BranchPerformanceReportProps {
@@ -17,7 +17,7 @@ export const BranchPerformanceReport: React.FC<BranchPerformanceReportProps> = (
   timeRange, 
   branchId 
 }) => {
-  const branch = branches.find(b => b.id === branchId) || branches[0];
+  const branch = sampleData.branches.find(b => b.id === branchId) || sampleData.branches[0];
   
   // Stats would normally be calculated based on timeRange and branchId
   const stats = {

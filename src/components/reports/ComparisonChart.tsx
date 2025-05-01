@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ResponsiveBar } from '@nivo/bar';
 import { ResponsiveLine } from '@nivo/line';
 import { ResponsivePie } from '@nivo/pie';
-import { branches } from '@/utils/data';
+import { sampleData } from '@/utils/data';
 
 interface ComparisonChartProps {
   timeRange: 'weekly' | 'monthly' | 'yearly';
@@ -289,9 +289,10 @@ function transformToPieData(
   branchId: number | null
 ) {
   // For pie chart, we'll show distribution by policy type or branch
+  const branches = sampleData.branches.map(b => b.name);
   const labels = branchId 
     ? ['Term', 'Endowment', 'Whole Life', 'ULIP', 'Pension'] 
-    : branches.map(b => b.name).slice(0, 5);
+    : branches.slice(0, 5);
   
   return labels.map(label => {
     const value = Math.floor(Math.random() * 100) + 20;

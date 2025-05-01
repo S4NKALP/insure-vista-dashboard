@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { branches } from '@/utils/data';
+import { sampleData } from '@/utils/data';
 
 type TimeRange = 'weekly' | 'monthly' | 'yearly';
 
@@ -62,7 +62,7 @@ export const ReportFilters: React.FC<ReportFiltersProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Branches</SelectItem>
-                  {branches.map((branch) => (
+                  {sampleData.branches.map((branch) => (
                     <SelectItem key={branch.id} value={branch.id.toString()}>
                       {branch.name}
                     </SelectItem>
