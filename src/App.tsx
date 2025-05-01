@@ -19,6 +19,8 @@ import NotFound from "./pages/NotFound";
 import AgentManagement from "./pages/AgentManagement";
 import ClaimManagement from "./pages/ClaimManagement";
 import PaymentManagement from "./pages/PaymentManagement";
+import LoanManagement from "./pages/LoanManagement";
+import Settings from "./pages/Settings";
 
 const queryClient = new QueryClient();
 
@@ -48,7 +50,7 @@ const App = () => (
             {/* Superadmin Routes */}
             <Route path="/users" element={<PrivateRoute allowedRoles={['superadmin', 'branch']}><UserManagement /></PrivateRoute>} />
             <Route path="/branches" element={<PrivateRoute allowedRoles={['superadmin']}><BranchManagement /></PrivateRoute>} />
-            <Route path="/settings" element={<PrivateRoute allowedRoles={['superadmin']}><Dashboard /></PrivateRoute>} />
+            <Route path="/settings" element={<PrivateRoute allowedRoles={['superadmin']}><Settings /></PrivateRoute>} />
             <Route path="/agents" element={<PrivateRoute allowedRoles={['superadmin', 'branch']}><AgentManagement /></PrivateRoute>} />
             
             {/* Claims and Payments Routes */}
@@ -64,7 +66,7 @@ const App = () => (
             
             {/* Branch Admin Routes */}
             <Route path="/customers" element={<PrivateRoute allowedRoles={['branch']}><UserManagement /></PrivateRoute>} />
-            <Route path="/loans" element={<PrivateRoute allowedRoles={['branch']}><Dashboard /></PrivateRoute>} />
+            <Route path="/loans" element={<PrivateRoute><LoanManagement /></PrivateRoute>} />
             
             {/* Error Pages */}
             <Route path="/unauthorized" element={<Unauthorized />} />

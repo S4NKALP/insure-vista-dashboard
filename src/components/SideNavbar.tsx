@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -13,6 +14,7 @@ import {
   Settings,
   ChartBar,
   User,
+  Banknote,
 } from 'lucide-react';
 
 interface SideNavbarProps {
@@ -30,9 +32,10 @@ export const SideNavbar: React.FC<SideNavbarProps> = ({ collapsed }) => {
     { path: '/branches', icon: <Building size={20} />, label: 'Branches' },
     { path: '/users', icon: <Users size={20} />, label: 'Users' },
     { path: '/policies', icon: <FileText size={20} />, label: 'Policies' },
-    { path: '/reports', icon: <ChartBar size={20} />, label: 'Reports' },
+    { path: '/loans', icon: <Banknote size={20} />, label: 'Loans' },
     { path: '/claims', icon: <ClipboardCheck size={20} />, label: 'Claims' },
     { path: '/payments', icon: <CreditCard size={20} />, label: 'Payments' },
+    { path: '/reports', icon: <ChartBar size={20} />, label: 'Reports' },
     { path: '/settings', icon: <Settings size={20} />, label: 'Settings' },
   ];
   
@@ -41,8 +44,9 @@ export const SideNavbar: React.FC<SideNavbarProps> = ({ collapsed }) => {
     { path: '/customers', icon: <Users size={20} />, label: 'Customers' },
     { path: '/agents', icon: <User size={20} />, label: 'Agents' },
     { path: '/policy-holders', icon: <FileText size={20} />, label: 'Policy Holders' },
+    { path: '/loans', icon: <Banknote size={20} />, label: 'Loans' },
     { path: '/claims', icon: <ClipboardCheck size={20} />, label: 'Claims' },
-    { path: '/loans', icon: <CreditCard size={20} />, label: 'Loans' },
+    { path: '/payments', icon: <CreditCard size={20} />, label: 'Payments' },
     { path: '/reports', icon: <ChartBar size={20} />, label: 'Reports' },
   ];
   
