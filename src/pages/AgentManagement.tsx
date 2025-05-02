@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { AgentList } from '@/components/agent/AgentList';
@@ -10,6 +9,7 @@ const AgentManagement = () => {
   const [activeTab, setActiveTab] = useState<string>("agents");
   const { user } = useAuth();
   const isSuperAdmin = user?.role === 'superadmin';
+  const branchId = user?.role === 'branch' ? Number(user?.branchId) : undefined;
   
   return (
     <DashboardLayout title="Agent Management">
@@ -26,11 +26,10 @@ const AgentManagement = () => {
           </TabsList>
           
           <TabsContent value="agents" className="py-2">
-            <AgentList isSuperAdmin={isSuperAdmin} branchId={user?.role === 'branch' ? user?.branchId : undefined} />
+            <AgentList isSuperAdmin={isSuperAdmin} branchId={branchId?.toString()} />
           </TabsContent>
-          
           <TabsContent value="applications" className="py-2">
-            <AgentApplicationList isSuperAdmin={isSuperAdmin} branchId={user?.role === 'branch' ? user?.branchId : undefined} />
+            <AgentApplicationList isSuperAdmin={isSuperAdmin} branchId={branchId} />
           </TabsContent>
         </Tabs>
       </div>

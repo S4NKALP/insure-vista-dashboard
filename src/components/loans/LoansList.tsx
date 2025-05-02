@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
@@ -16,129 +15,60 @@ import { LoanDetailsDialog } from './LoanDetailsDialog';
 import { AddRepaymentDialog } from './AddRepaymentDialog';
 import { Eye, CheckCircle, XCircle, Clock, MoreHorizontal } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger 
-} from '@/components/ui/dropdown-menu';
 
-// Mock data for loans
-const mockedLoans = {
-  pending: [
-    {
-      id: 'loan-001',
-      policyHolder: 'Ram Sharma',
-      policyHolderId: 'ph-001',
-      policyId: 'pol-term-001',
-      loanType: 'Policy Loan',
-      amount: 150000,
-      requestDate: '2024-04-15',
-      reason: 'Children Education',
-      branch: 'Kohalpur Branch',
-      interestRate: 9.5,
-      status: 'pending'
-    },
-    {
-      id: 'loan-002',
-      policyHolder: 'Sita Poudel',
-      policyHolderId: 'ph-002',
-      policyId: 'pol-end-003',
-      loanType: 'Policy Loan',
-      amount: 250000,
-      requestDate: '2024-04-18',
-      reason: 'Medical Expenses',
-      branch: 'Kohalpur Branch',
-      interestRate: 10,
-      status: 'pending'
-    }
-  ],
-  approved: [
-    {
-      id: 'loan-003',
-      policyHolder: 'Hari Thapa',
-      policyHolderId: 'ph-003',
-      policyId: 'pol-end-005',
-      loanType: 'Policy Loan',
-      amount: 350000,
-      requestDate: '2024-04-01',
-      approvalDate: '2024-04-05',
-      reason: 'Business Investment',
-      branch: 'Pokhara Branch',
-      interestRate: 9.5,
-      status: 'approved',
-      amountDue: 350000,
-      repayments: []
-    }
-  ],
-  rejected: [
-    {
-      id: 'loan-004',
-      policyHolder: 'Gita Karki',
-      policyHolderId: 'ph-004',
-      policyId: 'pol-term-008',
-      loanType: 'Policy Loan',
-      amount: 500000,
-      requestDate: '2024-04-12',
-      rejectionDate: '2024-04-16',
-      reason: 'Home Renovation',
-      rejectionReason: 'Insufficient policy value',
-      branch: 'Kathmandu Branch',
-      interestRate: 10,
-      status: 'rejected'
-    }
-  ],
-  completed: [
-    {
-      id: 'loan-005',
-      policyHolder: 'Mohan Shrestha',
-      policyHolderId: 'ph-005',
-      policyId: 'pol-end-010',
-      loanType: 'Policy Loan',
-      amount: 200000,
-      requestDate: '2024-03-01',
-      approvalDate: '2024-03-05',
-      completionDate: '2024-04-10',
-      reason: 'Debt Consolidation',
-      branch: 'Kathmandu Branch',
-      interestRate: 9.5,
-      status: 'completed',
-      amountDue: 0,
-      repayments: [
-        { id: 'rep-001', date: '2024-03-20', amount: 100000 },
-        { id: 'rep-002', date: '2024-04-10', amount: 110000 }
-      ]
-    }
-  ]
-};
+interface Loan {
+  id: number;
+  policy_holder_number: string;
+  customer_name: string;
+  loan_amount: string;
+  remaining_balance: string;
+  interest_rate: string;
+  loan_status: string;
+  created_at: string;
+  updated_at: string;
+  accrued_interest: string;
+  last_interest_date: string;
+  policy_holder: number;
+}
 
 interface LoansListProps {
   status: 'pending' | 'approved' | 'rejected' | 'completed';
   canEdit: boolean;
+  onRepayment?: (loan: Loan) => void;
 }
 
-export const LoansList: React.FC<LoansListProps> = ({ status, canEdit }) => {
+export const LoansList: React.FC<LoansListProps> = ({ status, canEdit, onRepayment }) => {
   const { user } = useAuth();
   const userBranch = user?.branchName || '';
 
-  const [selectedLoan, setSelectedLoan] = React.useState<any | null>(null);
+  const [selectedLoan, setSelectedLoan] = React.useState<Loan | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = React.useState(false);
   const [repaymentDialogOpen, setRepaymentDialogOpen] = React.useState(false);
 
-  // If branch user, filter loans by their branch
-  let loans = mockedLoans[status] || [];
-  if (user?.role === 'branch') {
-    loans = loans.filter(loan => loan.branch === userBranch);
-  }
+  // Mock data based on data.json format
+  const loans: Loan[] = [
+    {
+      id: 1,
+      policy_holder_number: "1751451440002",
+      customer_name: "Sumitra Bam",
+      loan_amount: "25000.00",
+      remaining_balance: "13000.00",
+      interest_rate: "7.00",
+      loan_status: "Active",
+      created_at: "2025-04-30",
+      updated_at: "2025-04-30",
+      accrued_interest: "0.00",
+      last_interest_date: "2025-04-30",
+      policy_holder: 2
+    }
+  ];
 
-  const handleViewDetails = (loan: any) => {
+  const handleViewDetails = (loan: Loan) => {
     setSelectedLoan(loan);
     setDetailsDialogOpen(true);
   };
 
-  const handleAddRepayment = (loan: any) => {
+  const handleAddRepayment = (loan: Loan) => {
     setSelectedLoan(loan);
     setRepaymentDialogOpen(true);
   };
@@ -158,86 +88,67 @@ export const LoansList: React.FC<LoansListProps> = ({ status, canEdit }) => {
     }
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'active':
+        return 'default';
+      case 'pending':
+        return 'secondary';
+      case 'completed':
+        return 'default';
+      case 'rejected':
+        return 'destructive';
+      default:
+        return 'default';
+    }
+  };
+
   return (
-    <div>
+    <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Loan ID</TableHead>
-            <TableHead>Policy Holder</TableHead>
-            <TableHead>Loan Type</TableHead>
-            <TableHead>Amount</TableHead>
-            <TableHead>Branch</TableHead>
-            <TableHead>Date</TableHead>
+            <TableHead>Policy Number</TableHead>
+            <TableHead>Customer</TableHead>
+            <TableHead>Loan Amount</TableHead>
+            <TableHead>Remaining Balance</TableHead>
+            <TableHead>Accrued Interest</TableHead>
+            <TableHead>Interest Rate</TableHead>
+            <TableHead>Last Interest Date</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Created At</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {loans.length > 0 ? (
-            loans.map((loan) => (
-              <TableRow key={loan.id}>
-                <TableCell className="font-medium">{loan.id}</TableCell>
-                <TableCell>{loan.policyHolder}</TableCell>
-                <TableCell>{loan.loanType}</TableCell>
-                <TableCell>{formatCurrency(loan.amount)}</TableCell>
-                <TableCell>{loan.branch}</TableCell>
-                <TableCell>{formatDate(status === 'rejected' ? loan.rejectionDate : 
-                  status === 'completed' ? loan.completionDate : 
-                  status === 'approved' ? loan.approvalDate : loan.requestDate)}</TableCell>
-                <TableCell>{getStatusBadge(loan.status)}</TableCell>
-                <TableCell className="text-right">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" onClick={() => handleViewDetails(loan)}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>View Details</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  
-                  {status === 'approved' && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        {user?.role === 'branch' && (
-                          <DropdownMenuItem onClick={() => handleAddRepayment(loan)}>
-                            Add Repayment
-                          </DropdownMenuItem>
-                        )}
-                        {canEdit && (
-                          <>
-                            <DropdownMenuItem onClick={() => handleAddRepayment(loan)}>
-                              Add Repayment
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              Mark as Complete
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                No loans found
+          {loans.map((loan) => (
+            <TableRow key={loan.id}>
+              <TableCell>{loan.policy_holder_number}</TableCell>
+              <TableCell>{loan.customer_name}</TableCell>
+              <TableCell>{formatCurrency(parseFloat(loan.loan_amount))}</TableCell>
+              <TableCell>{formatCurrency(parseFloat(loan.remaining_balance))}</TableCell>
+              <TableCell>{formatCurrency(parseFloat(loan.accrued_interest))}</TableCell>
+              <TableCell>{loan.interest_rate}%</TableCell>
+              <TableCell>{loan.last_interest_date}</TableCell>
+              <TableCell>
+                <Badge variant={getStatusColor(loan.loan_status)}>
+                  {loan.loan_status}
+                </Badge>
+              </TableCell>
+              <TableCell>{loan.created_at}</TableCell>
+              <TableCell className="text-right">
+                {canEdit && loan.loan_status === 'Active' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onRepayment?.(loan)}
+                  >
+                    Record Payment
+                  </Button>
+                )}
               </TableCell>
             </TableRow>
-          )}
+          ))}
         </TableBody>
       </Table>
       

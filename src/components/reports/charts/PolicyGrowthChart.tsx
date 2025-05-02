@@ -1,13 +1,13 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
-  AreaChart, 
-  Area, 
+  BarChart, 
+  Bar, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
   Tooltip, 
+  Legend, 
   ResponsiveContainer 
 } from 'recharts';
 
@@ -17,54 +17,67 @@ interface PolicyGrowthChartProps {
 
 export const PolicyGrowthChart: React.FC<PolicyGrowthChartProps> = ({ timeRange }) => {
   // Generate data based on the selected time range
-  const data = generateGrowthData(timeRange);
+  const data = generatePolicyGrowthData(timeRange);
   
   return (
     <Card className="h-[400px]">
       <CardHeader>
-        <CardTitle>Policy Growth Trend</CardTitle>
+        <CardTitle>New Policies vs Matured Policies</CardTitle>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart
+        <ResponsiveContainer width="100%" height="90%">
+          <BarChart
             data={data}
-            margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="name" />
             <YAxis />
-            <Tooltip formatter={(value) => [`${value} Policies`, 'Total']} />
-            <Area type="monotone" dataKey="policies" stroke="#8884d8" fill="#8884d8" />
-          </AreaChart>
+            <Tooltip formatter={(value) => value.toString()} />
+            <Legend />
+            <Bar dataKey="newPolicies" name="New Policies" fill="#8884d8" />
+            <Bar dataKey="maturedPolicies" name="Matured Policies" fill="#82ca9d" />
+            <Bar dataKey="cancelledPolicies" name="Cancelled Policies" fill="#ff8042" />
+          </BarChart>
         </ResponsiveContainer>
       </CardContent>
     </Card>
   );
 };
 
-// Helper function to generate growth data
-function generateGrowthData(timeRange: 'weekly' | 'monthly' | 'yearly') {
+// Helper function to generate policy growth data
+function generatePolicyGrowthData(timeRange: 'weekly' | 'monthly' | 'yearly') {
   let labels: string[] = [];
-  let baseValue = 0;
-  let increment = 0;
   
   if (timeRange === 'weekly') {
     labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    baseValue = 680;
-    increment = 5;
   } else if (timeRange === 'monthly') {
-    labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    baseValue = 600;
-    increment = 25;
+    // Use last 6 months
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const currentMonth = new Date().getMonth();
+    labels = Array(6).fill(0).map((_, i) => {
+      const monthIndex = (currentMonth - 5 + i + 12) % 12;
+      return months[monthIndex];
+    });
   } else {
-    // Yearly data (showing last 5 years)
-    labels = ['2021', '2022', '2023', '2024', '2025'];
-    baseValue = 400;
-    increment = 100;
+    // Yearly - use last 5 years
+    const currentYear = new Date().getFullYear();
+    labels = Array(5).fill(0).map((_, i) => String(currentYear - 4 + i));
   }
   
-  return labels.map((name, index) => ({
-    name,
-    policies: baseValue + (increment * index) + Math.floor(Math.random() * increment),
-  }));
+  // Generate realistic data with trends
+  const baseNewPolicy = timeRange === 'weekly' ? 5 : timeRange === 'monthly' ? 20 : 100;
+  const baseMaturedPolicy = timeRange === 'weekly' ? 2 : timeRange === 'monthly' ? 10 : 40;
+  const baseCancelledPolicy = timeRange === 'weekly' ? 1 : timeRange === 'monthly' ? 5 : 15;
+  
+  // Create data with a growth trend
+  return labels.map((name, index) => {
+    const growth = 1 + (index * 0.1); // More growth over time
+    return {
+      name,
+      newPolicies: Math.floor((baseNewPolicy * growth) + Math.random() * 10),
+      maturedPolicies: Math.floor((baseMaturedPolicy * (1 + index * 0.05)) + Math.random() * 5),
+      cancelledPolicies: Math.floor((baseCancelledPolicy * (1 - index * 0.02 + 0.1)) + Math.random() * 3),
+    };
+  });
 }

@@ -1,7 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePermissions } from '@/contexts/PermissionsContext';
+import PermissionGate from '@/components/PermissionGate';
 import {
   Table,
   TableBody,
@@ -13,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -44,13 +46,18 @@ import sampleData from '@/utils/data';
 
 const UserManagement = () => {
   const { user } = useAuth();
+  const { isBranchAdmin, isSuperAdmin, userBranchId } = usePermissions();
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+  const [isEditUserOpen, setIsEditUserOpen] = useState(false);
   const [isViewUserOpen, setIsViewUserOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [userType, setUserType] = useState('all');
+  const [branches, setBranches] = useState([]);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
   const [newUser, setNewUser] = useState({
     username: '',
     first_name: '',
@@ -60,14 +67,25 @@ const UserManagement = () => {
     phone: '',
     address: '',
     user_type: 'customer',
-    branch: null
+    branch: null,
+    is_active: true
   });
 
   useEffect(() => {
     // Load users from the sample data
-    setUsers(sampleData.users || []);
-    setFilteredUsers(sampleData.users || []);
-  }, []);
+    let initialUsers = sampleData.users || [];
+    
+    // For branch admins, only show customers
+    if (isBranchAdmin) {
+      initialUsers = initialUsers.filter(user => user.user_type === 'customer');
+    }
+    
+    setUsers(initialUsers);
+    setFilteredUsers(initialUsers);
+    
+    // Load branches for assignment
+    setBranches(sampleData.branches || []);
+  }, [isBranchAdmin]);
 
   useEffect(() => {
     let filtered = [...users];
@@ -97,18 +115,108 @@ const UserManagement = () => {
       return;
     }
     
+    // Branch admins can only add customers
+    if (isBranchAdmin && newUser.user_type !== 'customer') {
+      toast.error("You can only add customers");
+      return;
+    }
+    
+    // Require branch selection for branch managers and agents
+    if ((newUser.user_type === 'branch' || newUser.user_type === 'agent') && !newUser.branch) {
+      toast.error(`Please select a branch for this ${newUser.user_type === 'branch' ? 'branch manager' : 'agent'}`);
+      return;
+    }
+    
     // Simulate adding a new user
     const newUserId = Math.max(...users.map(u => u.id), 0) + 1;
     const userToAdd = {
       ...newUser,
       id: newUserId,
-      is_active: true,
+      is_active: newUser.is_active || true,
       created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
+      // For branch admins, set the branch automatically
+      branch: isBranchAdmin ? userBranchId : newUser.branch
     };
     
     setUsers([...users, userToAdd]);
     setIsAddUserOpen(false);
+    resetUserForm();
+    
+    toast.success("User added successfully");
+  };
+
+  const handleEditUser = (userData) => {
+    setSelectedUser(userData);
+    setNewUser({
+      ...userData,
+      gender: userData.gender || '',
+      phone: userData.phone || '',
+      address: userData.address || '',
+      // Ensure all required fields are present
+      branch: userData.branch || null
+    });
+    setIsEditUserOpen(true);
+  };
+
+  const handleUpdateUser = () => {
+    // Validate form inputs
+    if (!newUser.username || !newUser.email || !newUser.first_name || !newUser.last_name) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+    
+    // Branch admins can only manage customers
+    if (isBranchAdmin && newUser.user_type !== 'customer') {
+      toast.error("You can only manage customers");
+      return;
+    }
+    
+    // Require branch selection for branch managers and agents
+    if ((newUser.user_type === 'branch' || newUser.user_type === 'agent') && !newUser.branch) {
+      toast.error(`Please select a branch for this ${newUser.user_type === 'branch' ? 'branch manager' : 'agent'}`);
+      return;
+    }
+    
+    // Update user
+    const updatedUsers = users.map(user => 
+      user.id === selectedUser.id 
+        ? { 
+            ...newUser, 
+            updated_at: new Date().toISOString() 
+          } 
+        : user
+    );
+    
+    setUsers(updatedUsers);
+    setIsEditUserOpen(false);
+    resetUserForm();
+    
+    toast.success("User updated successfully");
+  };
+
+  const handleDeleteUser = (userData) => {
+    setUserToDelete(userData);
+    setIsDeleting(true);
+  };
+
+  const confirmDelete = () => {
+    if (!userToDelete) return;
+    
+    const updatedUsers = users.filter(user => user.id !== userToDelete.id);
+    setUsers(updatedUsers);
+    setIsDeleting(false);
+    setUserToDelete(null);
+    
+    toast.success("User deleted successfully");
+  };
+
+  const handleViewUser = (userData) => {
+    setSelectedUser(userData);
+    setIsViewUserOpen(true);
+  };
+
+  const resetUserForm = () => {
     setNewUser({
       username: '',
       first_name: '',
@@ -118,15 +226,16 @@ const UserManagement = () => {
       phone: '',
       address: '',
       user_type: 'customer',
-      branch: null
+      branch: null,
+      is_active: true
     });
-    
-    toast.success("User added successfully");
+    setSelectedUser(null);
   };
 
-  const handleViewUser = (user) => {
-    setSelectedUser(user);
-    setIsViewUserOpen(true);
+  const getBranchName = (branchId) => {
+    if (!branchId) return 'Not Assigned';
+    const branch = branches.find(b => b.id === branchId);
+    return branch ? branch.name : 'Unknown Branch';
   };
 
   const getUserTypeLabel = (type) => {
@@ -149,30 +258,8 @@ const UserManagement = () => {
     }
   };
 
-  // Add the filter function that was omitted above
-  useEffect(() => {
-    let filtered = [...users];
-    
-    // Filter by search term
-    if (searchTerm) {
-      filtered = filtered.filter(user => 
-        user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-    
-    // Filter by user type
-    if (userType !== 'all') {
-      filtered = filtered.filter(user => user.user_type === userType);
-    }
-    
-    setFilteredUsers(filtered);
-  }, [searchTerm, userType, users]);
-
   return (
-    <DashboardLayout title="User Management">
+    <DashboardLayout title={isBranchAdmin ? "Customer Management" : "User Management"}>
       <div className="space-y-6">
         {/* Header with search and filters */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -180,24 +267,28 @@ const UserManagement = () => {
             <div className="relative w-full sm:w-64">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 pointer-events-none" />
               <Input 
-                placeholder="Search users..." 
+                placeholder={isBranchAdmin ? "Search customers..." : "Search users..."}
                 className="pl-8 w-full"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Select value={userType} onValueChange={setUserType}>
-              <SelectTrigger className="ml-2 w-[160px]">
-                <SelectValue placeholder="Filter by role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Users</SelectItem>
-                <SelectItem value="superadmin">Super Admin</SelectItem>
-                <SelectItem value="branch">Branch Manager</SelectItem>
-                <SelectItem value="agent">Agent</SelectItem>
-                <SelectItem value="customer">Customer</SelectItem>
-              </SelectContent>
-            </Select>
+            
+            {/* Only show role filter for superadmins */}
+            <PermissionGate permission="manage_admin_users">
+              <Select value={userType} onValueChange={setUserType}>
+                <SelectTrigger className="ml-2 w-[160px]">
+                  <SelectValue placeholder="Filter by role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Users</SelectItem>
+                  <SelectItem value="superadmin">Super Admin</SelectItem>
+                  <SelectItem value="branch">Branch Manager</SelectItem>
+                  <SelectItem value="agent">Agent</SelectItem>
+                  <SelectItem value="customer">Customer</SelectItem>
+                </SelectContent>
+              </Select>
+            </PermissionGate>
           </div>
           
           <Button 
@@ -205,55 +296,76 @@ const UserManagement = () => {
             onClick={() => setIsAddUserOpen(true)}
           >
             <UserPlus size={16} />
-            <span>Add New User</span>
+            <span>{isBranchAdmin ? "Add New Customer" : "Add New User"}</span>
           </Button>
         </div>
         
         {/* User list table */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <Table>
-            <TableCaption>List of all users in the system</TableCaption>
+            <TableCaption>{isBranchAdmin ? "List of all customers" : "List of all users in the system"}</TableCaption>
             <TableHeader>
               <TableRow>
                 <TableHead>ID</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Username</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
+                {!isBranchAdmin && <TableHead>Role</TableHead>}
+                {!isBranchAdmin && <TableHead>Branch</TableHead>}
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredUsers.length > 0 ? (
-                filteredUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.id}</TableCell>
-                    <TableCell>{`${user.first_name || ''} ${user.last_name || ''}`}</TableCell>
-                    <TableCell>{user.username}</TableCell>
-                    <TableCell>{user.email}</TableCell>
+                filteredUsers.map((userData) => (
+                  <TableRow key={userData.id}>
+                    <TableCell className="font-medium">{userData.id}</TableCell>
+                    <TableCell>{`${userData.first_name || ''} ${userData.last_name || ''}`}</TableCell>
+                    <TableCell>{userData.username}</TableCell>
+                    <TableCell>{userData.email}</TableCell>
+                    {!isBranchAdmin && (
+                      <TableCell>
+                        <Badge className={getUserTypeColor(userData.user_type)}>
+                          {getUserTypeLabel(userData.user_type)}
+                        </Badge>
+                      </TableCell>
+                    )}
+                    {!isBranchAdmin && (
+                      <TableCell>
+                        {(userData.user_type === 'branch' || userData.user_type === 'agent') && userData.branch ? (
+                          getBranchName(userData.branch)
+                        ) : (
+                          userData.user_type === 'customer' && userData.branch ? getBranchName(userData.branch) : 'N/A'
+                        )}
+                      </TableCell>
+                    )}
                     <TableCell>
-                      <Badge className={getUserTypeColor(user.user_type)}>
-                        {getUserTypeLabel(user.user_type)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={user.is_active ? "default" : "outline"}>
-                        {user.is_active ? "Active" : "Inactive"}
+                      <Badge variant={userData.is_active ? "default" : "outline"}>
+                        {userData.is_active ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right space-x-2">
                       <Button 
                         variant="ghost" 
                         size="sm"
-                        onClick={() => handleViewUser(user)}
+                        onClick={() => handleViewUser(userData)}
                       >
                         <Eye size={16} />
                       </Button>
-                      <Button variant="ghost" size="sm">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleEditUser(userData)}
+                      >
                         <Edit size={16} />
                       </Button>
-                      <Button variant="ghost" size="sm">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="text-red-500 hover:text-red-700"
+                        onClick={() => handleDeleteUser(userData)}
+                      >
                         <Trash2 size={16} />
                       </Button>
                     </TableCell>
@@ -261,74 +373,73 @@ const UserManagement = () => {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">
-                    No users found.
+                  <TableCell colSpan={isBranchAdmin ? 6 : 8} className="text-center py-8 text-gray-500">
+                    No users found
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
         </div>
-      </div>
-      
-      {/* Add User Dialog */}
-      <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
-        <DialogContent className="sm:max-w-[525px]">
-          <DialogHeader>
-            <DialogTitle>Add New User</DialogTitle>
-            <DialogDescription>
-              Enter the details for the new user. Click save when you're done.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
+        
+        {/* Add User Dialog */}
+        <Dialog open={isAddUserOpen} onOpenChange={(open) => {
+          setIsAddUserOpen(open);
+          if (!open) resetUserForm();
+        }}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>{isBranchAdmin ? "Add New Customer" : "Add New User"}</DialogTitle>
+              <DialogDescription>
+                Fill in the details below to create a new {isBranchAdmin ? "customer" : "user"}
+              </DialogDescription>
+            </DialogHeader>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="first_name">First Name *</Label>
+                <Label htmlFor="first_name">First Name</Label>
                 <Input 
                   id="first_name" 
                   value={newUser.first_name}
                   onChange={(e) => setNewUser({...newUser, first_name: e.target.value})}
-                  required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="last_name">Last Name *</Label>
+                <Label htmlFor="last_name">Last Name</Label>
                 <Input 
                   id="last_name" 
                   value={newUser.last_name}
                   onChange={(e) => setNewUser({...newUser, last_name: e.target.value})}
-                  required
                 />
               </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="username">Username *</Label>
+                <Label htmlFor="username">Username</Label>
                 <Input 
                   id="username" 
                   value={newUser.username}
                   onChange={(e) => setNewUser({...newUser, username: e.target.value})}
-                  required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email *</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input 
                   id="email" 
-                  type="email"
+                  type="email" 
                   value={newUser.email}
                   onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                  required
                 />
               </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone</Label>
+                <Input 
+                  id="phone" 
+                  value={newUser.phone || ''}
+                  onChange={(e) => setNewUser({...newUser, phone: e.target.value})}
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="gender">Gender</Label>
                 <Select 
-                  value={newUser.gender} 
+                  value={newUser.gender || ''} 
                   onValueChange={(value) => setNewUser({...newUser, gender: value})}
                 >
                   <SelectTrigger>
@@ -341,229 +452,339 @@ const UserManagement = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
+              <div className="space-y-2 col-span-2">
+                <Label htmlFor="address">Address</Label>
                 <Input 
-                  id="phone" 
+                  id="address" 
+                  value={newUser.address || ''}
+                  onChange={(e) => setNewUser({...newUser, address: e.target.value})}
+                />
+              </div>
+              
+              {/* Only show role selector for superadmins */}
+              <PermissionGate permission="manage_admin_users">
+                <div className="space-y-2 col-span-2">
+                  <Label htmlFor="user_type">User Role</Label>
+                  <Select 
+                    value={newUser.user_type} 
+                    onValueChange={(value) => setNewUser({...newUser, user_type: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="customer">Customer</SelectItem>
+                      <SelectItem value="agent">Agent</SelectItem>
+                      <SelectItem value="branch">Branch Manager</SelectItem>
+                      <SelectItem value="superadmin">Super Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </PermissionGate>
+              
+              {/* Show branch selector for branch managers and agents */}
+              {((isSuperAdmin && (newUser.user_type === 'branch' || newUser.user_type === 'agent' || newUser.user_type === 'customer')) || 
+                 (isBranchAdmin && newUser.user_type === 'customer')) && (
+                <div className="space-y-2 col-span-2">
+                  <Label htmlFor="branch">Branch Assignment</Label>
+                  <Select 
+                    value={newUser.branch ? String(newUser.branch) : ''} 
+                    onValueChange={(value) => setNewUser({...newUser, branch: value ? Number(value) : null})}
+                    disabled={isBranchAdmin} // Branch admins can't change the branch
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select branch" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {branches.map((branch) => (
+                        <SelectItem key={branch.id} value={String(branch.id)}>
+                          {branch.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {isBranchAdmin && (
+                    <p className="text-xs text-gray-500">Customers will be automatically assigned to your branch</p>
+                  )}
+                </div>
+              )}
+              
+              {/* Status toggle for editing users */}
+              <div className="space-y-2 col-span-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="is_active" 
+                    checked={!!newUser.is_active} 
+                    onCheckedChange={(checked) => setNewUser({...newUser, is_active: !!checked})}
+                  />
+                  <Label htmlFor="is_active">Active User</Label>
+                </div>
+                <p className="text-xs text-gray-500">Inactive users cannot login to the system</p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => {
+                setIsAddUserOpen(false);
+                resetUserForm();
+              }}>Cancel</Button>
+              <Button onClick={handleAddUser}>Add {isBranchAdmin ? "Customer" : "User"}</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        
+        {/* Edit User Dialog */}
+        <Dialog open={isEditUserOpen} onOpenChange={(open) => {
+          setIsEditUserOpen(open);
+          if (!open) resetUserForm();
+        }}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>Edit User</DialogTitle>
+              <DialogDescription>
+                Update details for {newUser.first_name} {newUser.last_name}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit_first_name">First Name</Label>
+                <Input 
+                  id="edit_first_name" 
+                  value={newUser.first_name}
+                  onChange={(e) => setNewUser({...newUser, first_name: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit_last_name">Last Name</Label>
+                <Input 
+                  id="edit_last_name" 
+                  value={newUser.last_name}
+                  onChange={(e) => setNewUser({...newUser, last_name: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit_username">Username</Label>
+                <Input 
+                  id="edit_username" 
+                  value={newUser.username}
+                  onChange={(e) => setNewUser({...newUser, username: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit_email">Email</Label>
+                <Input 
+                  id="edit_email" 
+                  type="email" 
+                  value={newUser.email}
+                  onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit_phone">Phone</Label>
+                <Input 
+                  id="edit_phone" 
                   value={newUser.phone || ''}
                   onChange={(e) => setNewUser({...newUser, phone: e.target.value})}
                 />
               </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
-              <Input 
-                id="address"
-                value={newUser.address || ''}
-                onChange={(e) => setNewUser({...newUser, address: e.target.value})}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="user_type">User Role *</Label>
-              <Select 
-                value={newUser.user_type} 
-                onValueChange={(value) => setNewUser({...newUser, user_type: value})}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select user role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="customer">Customer</SelectItem>
-                  <SelectItem value="agent">Agent</SelectItem>
-                  {user?.role === 'superadmin' && (
-                    <>
-                      <SelectItem value="branch">Branch Manager</SelectItem>
-                      <SelectItem value="superadmin">Super Admin</SelectItem>
-                    </>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            {newUser.user_type === 'branch' && (
               <div className="space-y-2">
-                <Label htmlFor="branch">Select Branch</Label>
+                <Label htmlFor="edit_gender">Gender</Label>
                 <Select 
-                  value={newUser.branch ? String(newUser.branch) : ''} 
-                  onValueChange={(value) => setNewUser({...newUser, branch: Number(value)})}
+                  value={newUser.gender || ''} 
+                  onValueChange={(value) => setNewUser({...newUser, gender: value})}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select branch" />
+                    <SelectValue placeholder="Select gender" />
                   </SelectTrigger>
                   <SelectContent>
-                    {sampleData.branches?.map(branch => (
-                      <SelectItem key={branch.id} value={String(branch.id)}>
-                        {branch.name}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="Male">Male</SelectItem>
+                    <SelectItem value="Female">Female</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddUserOpen(false)}>Cancel</Button>
-            <Button onClick={handleAddUser}>Save User</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* View User Dialog */}
-      {selectedUser && (
-        <Dialog open={isViewUserOpen} onOpenChange={setIsViewUserOpen}>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>User Details</DialogTitle>
-              <DialogDescription>
-                Viewing details for {selectedUser.first_name} {selectedUser.last_name}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="bg-gray-50 p-4 rounded-lg space-y-4">
-                <div className="flex flex-col md:flex-row justify-between gap-4">
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">User ID</h3>
-                    <p>{selectedUser.id}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Role</h3>
-                    <Badge className={getUserTypeColor(selectedUser.user_type)}>
-                      {getUserTypeLabel(selectedUser.user_type)}
-                    </Badge>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Status</h3>
-                    <Badge variant={selectedUser.is_active ? "default" : "outline"}>
-                      {selectedUser.is_active ? "Active" : "Inactive"}
-                    </Badge>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Full Name</h3>
-                    <p>{selectedUser.first_name} {selectedUser.last_name}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Username</h3>
-                    <p>{selectedUser.username}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Email</h3>
-                    <p>{selectedUser.email}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Phone</h3>
-                    <p>{selectedUser.phone || 'Not provided'}</p>
-                  </div>
-                </div>
-                
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Address</h3>
-                  <p>{selectedUser.address || 'Not provided'}</p>
-                </div>
-                
-                {selectedUser.branch && (
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Branch</h3>
-                    <p>{sampleData.branches?.find(b => b.id === selectedUser.branch)?.name || 'Unknown Branch'}</p>
-                  </div>
-                )}
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Created At</h3>
-                    <p>{new Date(selectedUser.created_at).toLocaleDateString()}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Last Updated</h3>
-                    <p>{new Date(selectedUser.updated_at).toLocaleDateString()}</p>
-                  </div>
-                </div>
+              <div className="space-y-2 col-span-2">
+                <Label htmlFor="edit_address">Address</Label>
+                <Input 
+                  id="edit_address" 
+                  value={newUser.address || ''}
+                  onChange={(e) => setNewUser({...newUser, address: e.target.value})}
+                />
               </div>
               
-              {/* Policy holder information if the user is a customer */}
-              {selectedUser.user_type === 'customer' && (
-                <div>
-                  <h3 className="font-medium flex items-center gap-2">
-                    <FileText size={16} />
-                    Policy Information
-                  </h3>
-                  
-                  {sampleData.policy_holders?.filter(policy => 
-                    sampleData.customers?.find(c => 
-                      c.user_details?.id === selectedUser.id && c.id === policy.customer?.id
-                    )
-                  ).length > 0 ? (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Policy Number</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead>Sum Assured</TableHead>
-                          <TableHead>Status</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {sampleData.policy_holders?.filter(policy => 
-                          sampleData.customers?.find(c => 
-                            c.user_details?.id === selectedUser.id && c.id === policy.customer?.id
-                          )
-                        ).map(policy => (
-                          <TableRow key={policy.id}>
-                            <TableCell>{policy.policy_number}</TableCell>
-                            <TableCell>{policy.policy?.name || 'Unknown'}</TableCell>
-                            <TableCell>Rs. {parseFloat(policy.sum_assured).toLocaleString()}</TableCell>
-                            <TableCell>
-                              <Badge variant={policy.status === 'Active' ? 'default' : 'outline'}>
-                                {policy.status}
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  ) : (
-                    <p className="text-sm text-gray-500 mt-2">No policies found for this customer.</p>
-                  )}
+              {/* Only show role selector for superadmins */}
+              <PermissionGate permission="manage_admin_users">
+                <div className="space-y-2 col-span-2">
+                  <Label htmlFor="edit_user_type">User Role</Label>
+                  <Select 
+                    value={newUser.user_type} 
+                    onValueChange={(value) => setNewUser({...newUser, user_type: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="customer">Customer</SelectItem>
+                      <SelectItem value="agent">Agent</SelectItem>
+                      <SelectItem value="branch">Branch Manager</SelectItem>
+                      <SelectItem value="superadmin">Super Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </PermissionGate>
+              
+              {/* Show branch selector for branch managers and agents */}
+              {((isSuperAdmin && (newUser.user_type === 'branch' || newUser.user_type === 'agent' || newUser.user_type === 'customer')) || 
+                 (isBranchAdmin && newUser.user_type === 'customer')) && (
+                <div className="space-y-2 col-span-2">
+                  <Label htmlFor="edit_branch">Branch Assignment</Label>
+                  <Select 
+                    value={newUser.branch ? String(newUser.branch) : ''} 
+                    onValueChange={(value) => setNewUser({...newUser, branch: value ? Number(value) : null})}
+                    disabled={isBranchAdmin} // Branch admins can't change the branch
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select branch" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {branches.map((branch) => (
+                        <SelectItem key={branch.id} value={String(branch.id)}>
+                          {branch.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
               
-              {/* Agent information if the user has an agent role */}
-              {selectedUser.user_type === 'agent' && (
-                <div>
-                  <h3 className="font-medium">Agent Information</h3>
-                  {sampleData.sales_agents?.find(agent => agent.application?.user === selectedUser.id) ? (
-                    <div className="bg-gray-50 p-4 rounded-lg mt-2">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <h4 className="text-sm font-medium text-gray-500">Agent Code</h4>
-                          <p>{sampleData.sales_agents.find(agent => agent.application?.user === selectedUser.id)?.agent_code}</p>
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-medium text-gray-500">Commission Rate</h4>
-                          <p>{sampleData.sales_agents.find(agent => agent.application?.user === selectedUser.id)?.commission_rate}%</p>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-gray-500 mt-2">No agent information found.</p>
-                  )}
+              {/* Status toggle */}
+              <div className="space-y-2 col-span-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="edit_is_active" 
+                    checked={!!newUser.is_active} 
+                    onCheckedChange={(checked) => setNewUser({...newUser, is_active: !!checked})}
+                  />
+                  <Label htmlFor="edit_is_active">Active User</Label>
                 </div>
-              )}
+                <p className="text-xs text-gray-500">Inactive users cannot login to the system</p>
+              </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsViewUserOpen(false)}>Close</Button>
-              <Button variant="default">
-                <Edit size={16} className="mr-2" />
-                Edit User
-              </Button>
+              <Button variant="outline" onClick={() => {
+                setIsEditUserOpen(false);
+                resetUserForm();
+              }}>Cancel</Button>
+              <Button onClick={handleUpdateUser}>Update User</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      )}
+        
+        {/* View User Dialog */}
+        {selectedUser && (
+          <Dialog open={isViewUserOpen} onOpenChange={setIsViewUserOpen}>
+            <DialogContent className="sm:max-w-[600px]">
+              <DialogHeader>
+                <DialogTitle>User Details</DialogTitle>
+                <DialogDescription>
+                  Viewing details for {selectedUser.first_name} {selectedUser.last_name}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm text-gray-500">ID</Label>
+                  <p>{selectedUser.id}</p>
+                </div>
+                <div>
+                  <Label className="text-sm text-gray-500">Username</Label>
+                  <p>{selectedUser.username}</p>
+                </div>
+                <div>
+                  <Label className="text-sm text-gray-500">Name</Label>
+                  <p>{selectedUser.first_name} {selectedUser.last_name}</p>
+                </div>
+                <div>
+                  <Label className="text-sm text-gray-500">Email</Label>
+                  <p>{selectedUser.email}</p>
+                </div>
+                <div>
+                  <Label className="text-sm text-gray-500">Role</Label>
+                  <Badge className={getUserTypeColor(selectedUser.user_type)}>
+                    {getUserTypeLabel(selectedUser.user_type)}
+                  </Badge>
+                </div>
+                <div>
+                  <Label className="text-sm text-gray-500">Status</Label>
+                  <Badge variant={selectedUser.is_active ? "default" : "outline"}>
+                    {selectedUser.is_active ? "Active" : "Inactive"}
+                  </Badge>
+                </div>
+                {selectedUser.user_type !== 'superadmin' && (
+                  <div>
+                    <Label className="text-sm text-gray-500">Branch</Label>
+                    <p>{selectedUser.branch ? getBranchName(selectedUser.branch) : 'Not Assigned'}</p>
+                  </div>
+                )}
+                {selectedUser.phone && (
+                  <div>
+                    <Label className="text-sm text-gray-500">Phone</Label>
+                    <p>{selectedUser.phone}</p>
+                  </div>
+                )}
+                {selectedUser.gender && (
+                  <div>
+                    <Label className="text-sm text-gray-500">Gender</Label>
+                    <p>{selectedUser.gender}</p>
+                  </div>
+                )}
+                {selectedUser.address && (
+                  <div className="col-span-2">
+                    <Label className="text-sm text-gray-500">Address</Label>
+                    <p>{selectedUser.address}</p>
+                  </div>
+                )}
+                <div>
+                  <Label className="text-sm text-gray-500">Created At</Label>
+                  <p>{new Date(selectedUser.created_at).toLocaleString()}</p>
+                </div>
+                <div>
+                  <Label className="text-sm text-gray-500">Last Updated</Label>
+                  <p>{new Date(selectedUser.updated_at).toLocaleString()}</p>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsViewUserOpen(false)}>Close</Button>
+                <Button onClick={() => {
+                  setIsViewUserOpen(false);
+                  handleEditUser(selectedUser);
+                }}>Edit User</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
+        
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={isDeleting} onOpenChange={setIsDeleting}>
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>Confirm Deletion</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete this user? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              {userToDelete && (
+                <p className="font-medium">
+                  {userToDelete.first_name} {userToDelete.last_name} ({getUserTypeLabel(userToDelete.user_type)})
+                </p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDeleting(false)}>Cancel</Button>
+              <Button variant="destructive" onClick={confirmDelete}>Delete User</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     </DashboardLayout>
   );
 };

@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CompanyKPIsChart } from './charts/CompanyKPIsChart';
 import { PremiumDistributionChart } from './charts/PremiumDistributionChart';
 import { PolicyGrowthChart } from './charts/PolicyGrowthChart';

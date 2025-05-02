@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Dialog,
@@ -30,10 +29,26 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 
+// Define the claim interface based on data.json
+interface Claim {
+  id: number;
+  policy_holder_number: string;
+  customer_name: string;
+  branch_name: string;
+  claim_date: string;
+  status: string;
+  reason: string;
+  other_reason: string;
+  documents: string | null;
+  claim_amount: string;
+  policy_holder: number;
+  branch: number;
+}
+
 interface ClaimDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  claim: any;
+  claim: Claim;
   canEdit: boolean;
 }
 
@@ -58,9 +73,9 @@ export const ClaimDetailsDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[800px]">
         <DialogHeader>
-          <DialogTitle>Claim #{claim.claimId}</DialogTitle>
+          <DialogTitle>Claim #{claim.id}</DialogTitle>
           <DialogDescription>
-            Filed on {formatDate(claim.filedDate)}
+            Filed on {formatDate(claim.claim_date)}
           </DialogDescription>
         </DialogHeader>
         
@@ -75,17 +90,17 @@ export const ClaimDetailsDialog = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground">Policy Holder</h3>
-                <p className="text-base">{claim.customerName}</p>
+                <p className="text-base">{claim.customer_name}</p>
               </div>
               
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground">Policy Number</h3>
-                <p className="text-base">{claim.policyNumber}</p>
+                <p className="text-base">{claim.policy_holder_number}</p>
               </div>
               
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground">Branch</h3>
-                <p className="text-base">{claim.branchName}</p>
+                <p className="text-base">{claim.branch_name}</p>
               </div>
               
               <div>
@@ -113,20 +128,20 @@ export const ClaimDetailsDialog = ({
               
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground">Claim Amount</h3>
-                <p className="text-base font-semibold">{formatCurrency(claim.amount)}</p>
+                <p className="text-base font-semibold">{formatCurrency(parseFloat(claim.claim_amount))}</p>
               </div>
               
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground">Description</h3>
                 <p className="text-base">
-                  {claim.description || "Policy holder claimed benefits due to " + claim.reason.toLowerCase() + " event that occurred on " + formatDate(claim.incidentDate || claim.filedDate)}
+                  {claim.other_reason || "Policy holder claimed benefits due to " + claim.reason.toLowerCase() + " event that occurred on " + formatDate(claim.claim_date)}
                 </p>
               </div>
               
-              {claim.investigationReport && (
+              {claim.documents && (
                 <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">Investigation Report</h3>
-                  <p className="text-base">{claim.investigationReport}</p>
+                  <h3 className="text-sm font-medium text-muted-foreground">Documents</h3>
+                  <p className="text-base">{claim.documents}</p>
                 </div>
               )}
             </div>
@@ -174,7 +189,7 @@ export const ClaimDetailsDialog = ({
                 </div>
                 <div className="space-y-1">
                   <p className="font-medium">Created by Claim Specialist</p>
-                  <p className="text-sm text-muted-foreground">{formatDate(claim.filedDate)}</p>
+                  <p className="text-sm text-muted-foreground">{formatDate(claim.claim_date)}</p>
                   <p>Claim registered in the system with initial supporting documents.</p>
                 </div>
               </div>
@@ -185,7 +200,7 @@ export const ClaimDetailsDialog = ({
                 </div>
                 <div className="space-y-1">
                   <p className="font-medium">Reviewed by Underwriter</p>
-                  <p className="text-sm text-muted-foreground">{formatDate(claim.reviewDate || new Date(claim.filedDate).setDate(new Date(claim.filedDate).getDate() + 2))}</p>
+                  <p className="text-sm text-muted-foreground">{formatDate(claim.claim_date)}</p>
                   <p>Initial documents verified and sent for further investigation.</p>
                 </div>
               </div>

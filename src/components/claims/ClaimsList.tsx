@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Card,
@@ -20,6 +19,22 @@ import { ClaimDetailsDialog } from './ClaimDetailsDialog';
 import { mockClaims } from '@/utils/data';
 import { formatDate, formatCurrency } from '@/lib/utils';
 
+// Define the claim interface based on data.json
+interface Claim {
+  id: number;
+  policy_holder_number: string;
+  customer_name: string;
+  branch_name: string;
+  claim_date: string;
+  status: string;
+  reason: string;
+  other_reason: string;
+  documents: string | null;
+  claim_amount: string;
+  policy_holder: number;
+  branch: number;
+}
+
 interface ClaimsListProps {
   status: 'pending' | 'approved' | 'rejected' | 'processing';
   canEdit: boolean;
@@ -27,20 +42,38 @@ interface ClaimsListProps {
 
 export const ClaimsList = ({ status, canEdit }: ClaimsListProps) => {
   const { toast } = useToast();
-  const [selectedClaim, setSelectedClaim] = React.useState<any>(null);
+  const [selectedClaim, setSelectedClaim] = React.useState<Claim | null>(null);
   const [detailsOpen, setDetailsOpen] = React.useState(false);
   
-  // Filter claims by status
-  const filteredClaims = mockClaims.filter(claim => claim.status.toLowerCase() === status);
+  // Mock data based on data.json
+  const claims: Claim[] = [
+    {
+      id: 2,
+      policy_holder_number: "1751451440001",
+      customer_name: "Nur Pratap Karki",
+      branch_name: "Kohalpur Branch",
+      claim_date: "2025-04-30",
+      status: "Pending",
+      reason: "Death",
+      other_reason: "",
+      documents: null,
+      claim_amount: "5000000.00",
+      policy_holder: 1,
+      branch: 1
+    }
+  ];
   
-  const handleStatusChange = (claimId: string, newStatus: string) => {
+  // Filter claims by status
+  const filteredClaims = claims.filter(claim => claim.status.toLowerCase() === status.toLowerCase());
+  
+  const handleStatusChange = (claimId: number, newStatus: string) => {
     toast({
-      title: `Claim ${claimId} status updated`,
+      title: `Claim #${claimId} status updated`,
       description: `Status has been changed to ${newStatus}`,
     });
   };
   
-  const handleViewClaim = (claim: any) => {
+  const handleViewClaim = (claim: Claim) => {
     setSelectedClaim(claim);
     setDetailsOpen(true);
   };
@@ -72,12 +105,12 @@ export const ClaimsList = ({ status, canEdit }: ClaimsListProps) => {
               ) : (
                 filteredClaims.map((claim) => (
                   <TableRow key={claim.id}>
-                    <TableCell className="font-medium">{claim.claimId}</TableCell>
-                    <TableCell>{claim.policyNumber}</TableCell>
-                    <TableCell>{claim.customerName}</TableCell>
+                    <TableCell className="font-medium">{claim.id}</TableCell>
+                    <TableCell>{claim.policy_holder_number}</TableCell>
+                    <TableCell>{claim.customer_name}</TableCell>
                     <TableCell>{claim.reason}</TableCell>
-                    <TableCell>{formatCurrency(claim.amount)}</TableCell>
-                    <TableCell>{formatDate(claim.filedDate)}</TableCell>
+                    <TableCell>{formatCurrency(Number(claim.claim_amount))}</TableCell>
+                    <TableCell>{formatDate(claim.claim_date)}</TableCell>
                     <TableCell>
                       <Badge 
                         variant={
@@ -98,10 +131,10 @@ export const ClaimsList = ({ status, canEdit }: ClaimsListProps) => {
                         
                         {canEdit && status === 'pending' && (
                           <>
-                            <Button variant="ghost" size="sm" onClick={() => handleStatusChange(claim.claimId, 'approved')}>
+                            <Button variant="ghost" size="sm" onClick={() => handleStatusChange(claim.id, 'approved')}>
                               <Check className="h-4 w-4 text-green-600" />
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleStatusChange(claim.claimId, 'rejected')}>
+                            <Button variant="ghost" size="sm" onClick={() => handleStatusChange(claim.id, 'rejected')}>
                               <X className="h-4 w-4 text-red-600" />
                             </Button>
                           </>

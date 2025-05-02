@@ -1,56 +1,170 @@
-# Welcome to your Lovable project
+# Insure Vista Dashboard
 
-## Project info
+A comprehensive insurance management dashboard built with modern web technologies.
 
-**URL**: https://lovable.dev/projects/4c695510-c689-4b1f-b520-fe969a5eaf4a
+## Project Structure
 
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/4c695510-c689-4b1f-b520-fe969a5eaf4a) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+insure-vista-dashboard/
+├── src/
+│   ├── components/     # Reusable UI components
+│   │   ├── ui/        # Base UI components (buttons, inputs, etc.)
+│   │   ├── dashboard/ # Dashboard-specific components
+│   │   ├── policy/    # Policy management components
+│   │   ├── policyholder/ # Policy holder components
+│   │   ├── agent/     # Agent management components
+│   │   ├── claims/    # Claims management components
+│   │   ├── loans/     # Loan management components
+│   │   ├── payments/  # Payment management components
+│   │   ├── reports/   # Reports components
+│   │   └── settings/  # Settings components
+│   ├── contexts/      # React context providers
+│   ├── hooks/         # Custom React hooks
+│   ├── lib/           # Utility libraries and configurations
+│   ├── pages/         # Application screens
+│   └── utils/         # Helper functions and utilities
+├── public/            # Static assets
+└── ...config files
 ```
 
-**Edit a file directly in GitHub**
+## Screen Flow and Components
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+The application consists of the following main screens and their components:
 
-**Use GitHub Codespaces**
+1. **Login** (`/login`)
+   - Authentication screen for users to access the dashboard
+   - Components:
+     - LoginForm
+     - AuthLayout
+     - ErrorMessage
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+2. **Dashboard** (`/dashboard`)
+   - Main overview with key metrics and statistics
+   - Components:
+     - DashboardLayout
+     - SideNavbar
+     - StatsOverview
+     - RecentActivities
+     - PerformanceMetrics
+     - QuickActions
 
-## What technologies are used for this project?
+3. **Policy Management** (`/policies`)
+   - Manage insurance policies
+   - View, create, and update policy details
+   - Components:
+     - PolicyList
+     - PolicyForm
+     - PolicyDetails
+     - PolicySearch
+     - PolicyFilters
+
+4. **Policy Holder Management** (`/policy-holders`)
+   - Manage policy holder information
+   - Track customer details and history
+   - Components:
+     - PolicyHolderList
+     - PolicyHolderForm
+     - PolicyHolderDetails
+     - PolicyHolderSearch
+     - PolicyHistory
+
+5. **Branch Management** (`/branches`)
+   - Manage insurance branches
+   - Handle branch operations and staff
+   - Components:
+     - BranchList
+     - BranchForm
+     - BranchDetails
+     - StaffManagement
+     - BranchMetrics
+
+6. **User Management** (`/users`)
+   - Manage system users and permissions
+   - Control access levels and roles
+   - Components:
+     - UserList
+     - UserForm
+     - RoleManagement
+     - PermissionSettings
+     - UserActivity
+
+7. **Agent Management** (`/agents`)
+   - Manage insurance agents
+   - Track agent performance and commissions
+   - Components:
+     - AgentList
+     - AgentForm
+     - AgentPerformance
+     - CommissionCalculator
+     - AgentMetrics
+
+8. **Claim Management** (`/claims`)
+   - Process and track insurance claims
+   - Handle claim documentation
+   - Components:
+     - ClaimList
+     - ClaimForm
+     - ClaimDetails
+     - DocumentUpload
+     - ClaimStatus
+
+9. **Loan Management** (`/loans`)
+   - Manage insurance-related loans
+   - Track loan status and payments
+   - Components:
+     - LoanList
+     - LoanForm
+     - LoanDetails
+     - PaymentSchedule
+     - LoanCalculator
+
+10. **Payment Management** (`/payments`)
+    - Handle premium payments
+    - Track payment history and status
+    - Components:
+      - PaymentList
+      - PaymentForm
+      - PaymentDetails
+      - PaymentHistory
+      - PaymentReceipt
+
+11. **Reports** (`/reports`)
+    - Generate and view various reports
+    - Analytics and insights
+    - Components:
+      - ReportGenerator
+      - ReportFilters
+      - DataVisualization
+      - ExportOptions
+      - ReportScheduler
+
+12. **Settings** (`/settings`)
+    - System configuration
+    - User preferences
+    - Components:
+      - SystemSettings
+      - UserPreferences
+      - NotificationSettings
+      - SecuritySettings
+      - BackupRestore
+
+## Common Components
+
+The application uses several shared components across screens:
+
+- `DashboardLayout`: Main layout wrapper
+- `SideNavbar`: Navigation sidebar
+- `PrivateRoute`: Authentication wrapper
+- UI Components:
+  - Buttons
+  - Forms
+  - Tables
+  - Cards
+  - Modals
+  - Alerts
+  - Loading states
+
+## Technologies Used
 
 This project is built with:
 
@@ -60,14 +174,51 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
-## How can I deploy this project?
+## Getting Started
 
-Simply open [Lovable](https://lovable.dev/projects/4c695510-c689-4b1f-b520-fe969a5eaf4a) and click on Share -> Publish.
+Follow these steps to run the project locally:
 
-## Can I connect a custom domain to my Lovable project?
+```sh
+# Step 1: Clone the repository
+git clone <YOUR_GIT_URL>
 
-Yes, you can!
+# Step 2: Navigate to the project directory
+cd insure-vista-dashboard
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+# Step 3: Install dependencies
+npm install
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+# Step 4: Start the development server
+npm run dev
+```
+
+## Development
+
+The project uses several modern development tools and practices:
+
+- TypeScript for type safety
+- Tailwind CSS for styling
+- shadcn-ui for UI components
+- React Context for state management
+- Custom hooks for reusable logic
+
+## Deployment
+
+The application can be deployed using various methods:
+
+1. **Using Lovable**
+   - Visit the Lovable Project dashboard
+   - Click on Share -> Publish
+
+2. **Custom Domain**
+   - Navigate to Project > Settings > Domains
+   - Click Connect Domain
+   - Follow the domain setup guide
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request

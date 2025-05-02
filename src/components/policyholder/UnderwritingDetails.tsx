@@ -1,301 +1,318 @@
-
 import React from 'react';
-import { sampleData } from '@/utils/data';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, X } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { formatDate } from "@/lib/utils";
+import { KYCDialog } from "@/components/kyc/KYCDialog";
 
-interface UnderwritingDetailsProps {
-  policyHolderId: number;
+interface PolicyHolder {
+  id: number;
+  policy_number: string;
+  sum_assured: string;
+  duration_years: number;
+  date_of_birth: string;
+  age: number;
+  include_adb: boolean;
+  include_ptd: boolean;
+  nominee_name: string;
+  payment_interval: string;
+  risk_category: string;
+  status: string;
+  payment_status: string;
+  start_date: string;
+  maturity_date: string;
+  customer: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone_number: string;
+    address: string;
+    gender: string;
+  };
+  branch: {
+    id: number;
+    name: string;
+    branch_code: number;
+  };
+  policy: {
+    id: number;
+    name: string;
+    policy_code: string;
+    policy_type: string;
+  };
+  agent: {
+    id: number;
+    agent_code: string;
+  };
+  kyc?: {
+    id: number;
+    document_type: string;
+    document_number: string;
+    document_front: string;
+    document_back: string;
+    pan_number: string | null;
+    pan_front: string | null;
+    pan_back: string | null;
+    pp_photo: string;
+    province: string;
+    district: string;
+    municipality: string;
+    ward: string;
+    nearest_hospital: string;
+    natural_hazard_exposure: string;
+    status: string;
+  };
 }
 
-export const UnderwritingDetails = ({ policyHolderId }: UnderwritingDetailsProps) => {
-  // Get policy holder and underwriting data
-  const policyHolder = sampleData.policy_holders.find(p => p.id === policyHolderId);
-  const underwritingData = sampleData.underwriting.find(u => u.policy_holder === policyHolderId);
-  
-  if (!policyHolder) {
-    return <div className="text-center py-6">Policy holder not found.</div>;
-  }
+interface UnderwritingDetailsProps {
+  policyHolder: PolicyHolder;
+  canEdit?: boolean;
+}
 
-  // Function to get risk badge color
-  const getRiskBadgeVariant = (category: string) => {
-    switch (category?.toLowerCase()) {
-      case 'low':
-        return 'default';
-      case 'moderate':
-        return 'secondary';
-      case 'high':
-        return 'destructive';
-      default:
-        return 'secondary';
-    }
-  };
+export const UnderwritingDetails: React.FC<UnderwritingDetailsProps> = ({
+  policyHolder,
+  canEdit = false,
+}) => {
+  const [isKYCDialogOpen, setIsKYCDialogOpen] = React.useState(false);
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Customer Information</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="divide-y divide-gray-100">
-              <div className="px-4 py-3 grid grid-cols-1 md:grid-cols-2 gap-1">
-                <dt className="text-sm font-medium">Full Name</dt>
-                <dd className="text-sm">{policyHolder.customer_name}</dd>
-              </div>
-              <div className="px-4 py-3 grid grid-cols-1 md:grid-cols-2 gap-1">
-                <dt className="text-sm font-medium">Policy Number</dt>
-                <dd className="text-sm font-mono">{policyHolder.policy_number}</dd>
-              </div>
-              <div className="px-4 py-3 grid grid-cols-1 md:grid-cols-2 gap-1">
-                <dt className="text-sm font-medium">Date of Birth</dt>
-                <dd className="text-sm">{policyHolder.date_of_birth || 'N/A'}</dd>
-              </div>
-              <div className="px-4 py-3 grid grid-cols-1 md:grid-cols-2 gap-1">
-                <dt className="text-sm font-medium">Phone Number</dt>
-                <dd className="text-sm">{policyHolder.phone_number || 'N/A'}</dd>
-              </div>
-              <div className="px-4 py-3 grid grid-cols-1 md:grid-cols-2 gap-1">
-                <dt className="text-sm font-medium">Yearly Income</dt>
-                <dd className="text-sm">Rs. {Number(policyHolder.yearly_income || 0).toLocaleString()}</dd>
-              </div>
-            </dl>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Policy Details</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="divide-y divide-gray-100">
-              <div className="px-4 py-3 grid grid-cols-1 md:grid-cols-2 gap-1">
-                <dt className="text-sm font-medium">Policy Type</dt>
-                <dd className="text-sm">{policyHolder.policy?.policy_type}</dd>
-              </div>
-              <div className="px-4 py-3 grid grid-cols-1 md:grid-cols-2 gap-1">
-                <dt className="text-sm font-medium">Sum Assured</dt>
-                <dd className="text-sm">Rs. {Number(policyHolder.sum_assured).toLocaleString()}</dd>
-              </div>
-              <div className="px-4 py-3 grid grid-cols-1 md:grid-cols-2 gap-1">
-                <dt className="text-sm font-medium">Duration</dt>
-                <dd className="text-sm">{policyHolder.duration_years} Years</dd>
-              </div>
-              <div className="px-4 py-3 grid grid-cols-1 md:grid-cols-2 gap-1">
-                <dt className="text-sm font-medium">Start Date</dt>
-                <dd className="text-sm">{policyHolder.start_date}</dd>
-              </div>
-              <div className="px-4 py-3 grid grid-cols-1 md:grid-cols-2 gap-1">
-                <dt className="text-sm font-medium">Maturity Date</dt>
-                <dd className="text-sm">{policyHolder.maturity_date}</dd>
-              </div>
-            </dl>
-          </CardContent>
-        </Card>
-      </div>
-
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Underwriting Assessment</CardTitle>
-            {underwritingData && (
-              <Badge variant={getRiskBadgeVariant(underwritingData.risk_category)} className="ml-2">
-                {underwritingData.risk_category || 'Not Assessed'} Risk
-              </Badge>
+          <div className="flex justify-between items-center">
+            <CardTitle>Policy Information</CardTitle>
+            {canEdit && (
+              <Button variant="outline" onClick={() => setIsKYCDialogOpen(true)}>
+                {policyHolder.kyc ? 'Update KYC' : 'Add KYC'}
+              </Button>
             )}
           </div>
         </CardHeader>
         <CardContent>
-          {!underwritingData ? (
-            <p className="text-center py-3 text-muted-foreground">No underwriting data available.</p>
-          ) : (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 border rounded-md">
-                  <p className="text-sm font-medium mb-1">Risk Assessment Score</p>
-                  <p className="text-2xl font-bold">{underwritingData.risk_assessment_score}</p>
-                </div>
-                <div className="p-4 border rounded-md">
-                  <p className="text-sm font-medium mb-1">Manual Override</p>
-                  <p className="text-lg flex items-center">
-                    {underwritingData.manual_override ? (
-                      <>
-                        <Check className="mr-1 h-5 w-5 text-green-500" />
-                        Yes
-                      </>
-                    ) : (
-                      <>
-                        <X className="mr-1 h-5 w-5 text-red-500" />
-                        No
-                      </>
-                    )}
-                  </p>
-                </div>
-                <div className="p-4 border rounded-md">
-                  <p className="text-sm font-medium mb-1">Last Updated</p>
-                  <p className="text-sm">{new Date(underwritingData.last_updated_at).toLocaleDateString()} by {underwritingData.last_updated_by}</p>
-                </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground">Policy Number</h3>
+              <p className="text-lg">{policyHolder.policy_number}</p>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground">Sum Assured</h3>
+              <p className="text-lg">Rs. {parseFloat(policyHolder.sum_assured).toLocaleString()}</p>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground">Policy Type</h3>
+              <p className="text-lg">{policyHolder.policy.policy_type}</p>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground">Policy Name</h3>
+              <p className="text-lg">{policyHolder.policy.name}</p>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground">Duration</h3>
+              <p className="text-lg">{policyHolder.duration_years} years</p>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground">Status</h3>
+              <Badge variant={policyHolder.status === 'Active' ? 'default' : 'secondary'}>
+                {policyHolder.status}
+              </Badge>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground">Payment Status</h3>
+              <Badge variant={policyHolder.payment_status === 'Paid' ? 'default' : 'secondary'}>
+                {policyHolder.payment_status}
+              </Badge>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground">Start Date</h3>
+              <p className="text-lg">{formatDate(policyHolder.start_date)}</p>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground">Maturity Date</h3>
+              <p className="text-lg">{formatDate(policyHolder.maturity_date)}</p>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground">Branch</h3>
+              <p className="text-lg">{policyHolder.branch.name}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Customer Information</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground">Name</h3>
+              <p className="text-lg">
+                {policyHolder.customer.first_name} {policyHolder.customer.last_name}
+              </p>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground">Email</h3>
+              <p className="text-lg">{policyHolder.customer.email}</p>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground">Phone</h3>
+              <p className="text-lg">{policyHolder.customer.phone_number}</p>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground">Gender</h3>
+              <p className="text-lg capitalize">{policyHolder.customer.gender === 'M' ? 'Male' : 'Female'}</p>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground">Date of Birth</h3>
+              <p className="text-lg">{formatDate(policyHolder.date_of_birth)}</p>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground">Age</h3>
+              <p className="text-lg">{policyHolder.age} years</p>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground">Address</h3>
+              <p className="text-lg">{policyHolder.customer.address}</p>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground">Nominee</h3>
+              <p className="text-lg">{policyHolder.nominee_name}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Risk & Coverage</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground">Risk Category</h3>
+              <p className="text-lg">{policyHolder.risk_category}</p>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground">Payment Interval</h3>
+              <p className="text-lg capitalize">{policyHolder.payment_interval}</p>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground">ADB Coverage</h3>
+              <p className="text-lg">{policyHolder.include_adb ? 'Yes' : 'No'}</p>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground">PTD Coverage</h3>
+              <p className="text-lg">{policyHolder.include_ptd ? 'Yes' : 'No'}</p>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-muted-foreground">Agent Code</h3>
+              <p className="text-lg">{policyHolder.agent.agent_code}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {policyHolder.kyc && (
+        <Card>
+          <CardHeader>
+            <CardTitle>KYC Information</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground">Document Type</h3>
+                <p className="text-lg">{policyHolder.kyc.document_type}</p>
               </div>
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground">Document Number</h3>
+                <p className="text-lg">{policyHolder.kyc.document_number}</p>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground">PAN Number</h3>
+                <p className="text-lg">{policyHolder.kyc.pan_number || 'Not provided'}</p>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground">Status</h3>
+                <Badge variant={policyHolder.kyc.status === 'Approved' ? 'default' : 'secondary'}>
+                  {policyHolder.kyc.status}
+                </Badge>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground">Location</h3>
+                <p className="text-lg">
+                  {policyHolder.kyc.municipality}, {policyHolder.kyc.district}, {policyHolder.kyc.province}
+                </p>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground">Ward</h3>
+                <p className="text-lg">{policyHolder.kyc.ward}</p>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground">Nearest Hospital</h3>
+                <p className="text-lg">{policyHolder.kyc.nearest_hospital}</p>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground">Natural Hazard Exposure</h3>
+                <p className="text-lg capitalize">{policyHolder.kyc.natural_hazard_exposure}</p>
+              </div>
+            </div>
 
-              <Tabs defaultValue="health">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="health">Health Profile</TabsTrigger>
-                  <TabsTrigger value="financial">Financial Review</TabsTrigger>
-                  <TabsTrigger value="nominees">Nominees</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="health" className="pt-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-3">
-                      <h4 className="font-medium">Health Summary</h4>
-                      
-                      <div className="grid grid-cols-1 gap-2">
-                        <div className="flex justify-between p-2 bg-muted/40 rounded">
-                          <span>Health History:</span>
-                          <span className="font-medium">{policyHolder.health_history || 'Not provided'}</span>
-                        </div>
-                        <div className="flex justify-between p-2 bg-muted/40 rounded">
-                          <span>Exercise Frequency:</span>
-                          <span className="font-medium">{policyHolder.exercise_frequency || 'Not provided'}</span>
-                        </div>
-                        <div className="flex justify-between p-2 bg-muted/40 rounded">
-                          <span>Family Medical History:</span>
-                          <span className="font-medium">{policyHolder.family_medical_history || 'Not provided'}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <h4 className="font-medium">Risk Factors</h4>
-                      
-                      <div className="grid grid-cols-1 gap-2">
-                        <div className="flex justify-between p-2 bg-muted/40 rounded">
-                          <span>Alcoholic:</span>
-                          <span className="font-medium flex items-center">
-                            {policyHolder.alcoholic ? (
-                              <>
-                                <Check className="mr-1 h-4 w-4 text-red-500" />
-                                Yes
-                              </>
-                            ) : (
-                              <>
-                                <X className="mr-1 h-4 w-4 text-green-500" />
-                                No
-                              </>
-                            )}
-                          </span>
-                        </div>
-                        <div className="flex justify-between p-2 bg-muted/40 rounded">
-                          <span>Smoker:</span>
-                          <span className="font-medium flex items-center">
-                            {policyHolder.smoker ? (
-                              <>
-                                <Check className="mr-1 h-4 w-4 text-red-500" />
-                                Yes
-                              </>
-                            ) : (
-                              <>
-                                <X className="mr-1 h-4 w-4 text-green-500" />
-                                No
-                              </>
-                            )}
-                          </span>
-                        </div>
-                        <div className="flex justify-between p-2 bg-muted/40 rounded">
-                          <span>Habits:</span>
-                          <span className="font-medium">{policyHolder.habits || 'Not provided'}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="financial" className="pt-4">
-                  <div className="space-y-4">
-                    <h4 className="font-medium">Financial Profile</h4>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="p-4 border rounded-md">
-                        <p className="text-sm font-medium mb-1">Yearly Income</p>
-                        <p className="text-2xl font-bold">Rs. {Number(policyHolder.yearly_income || 0).toLocaleString()}</p>
-                      </div>
-                      <div className="p-4 border rounded-md">
-                        <p className="text-sm font-medium mb-1">Sum Assured Ratio</p>
-                        <p className="text-2xl font-bold">
-                          {policyHolder.yearly_income ? (
-                            (Number(policyHolder.sum_assured) / Number(policyHolder.yearly_income)).toFixed(1) + 'x'
-                          ) : 'N/A'}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="p-4 border rounded-md">
-                      <h4 className="font-medium mb-2">Assets Details</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {policyHolder.assets_details || 'No assets information provided.'}
-                      </p>
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="nominees" className="pt-4">
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-3">
-                        <h4 className="font-medium">Nominee Details</h4>
-                        
-                        <div className="grid grid-cols-1 gap-2">
-                          <div className="flex justify-between p-2 bg-muted/40 rounded">
-                            <span>Nominee Name:</span>
-                            <span className="font-medium">{policyHolder.nominee_name || 'Not provided'}</span>
-                          </div>
-                          <div className="flex justify-between p-2 bg-muted/40 rounded">
-                            <span>Relationship:</span>
-                            <span className="font-medium">{policyHolder.nominee_relation || 'Not provided'}</span>
-                          </div>
-                          <div className="flex justify-between p-2 bg-muted/40 rounded">
-                            <span>Document Type:</span>
-                            <span className="font-medium">{policyHolder.nominee_document_type || 'Not provided'}</span>
-                          </div>
-                          <div className="flex justify-between p-2 bg-muted/40 rounded">
-                            <span>Document Number:</span>
-                            <span className="font-medium">{policyHolder.nominee_document_number || 'Not provided'}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-3">
-                        <h4 className="font-medium">Emergency Contact</h4>
-                        
-                        <div className="grid grid-cols-1 gap-2">
-                          <div className="flex justify-between p-2 bg-muted/40 rounded">
-                            <span>Contact Name:</span>
-                            <span className="font-medium">{policyHolder.emergency_contact_name || 'Not provided'}</span>
-                          </div>
-                          <div className="flex justify-between p-2 bg-muted/40 rounded">
-                            <span>Contact Number:</span>
-                            <span className="font-medium">{policyHolder.emergency_contact_number || 'Same as policyholder'}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </TabsContent>
-              </Tabs>
-              
-              {underwritingData.remarks && (
-                <div className="p-4 border rounded-md mt-4">
-                  <h4 className="font-medium mb-2">Underwriter Remarks</h4>
-                  <p className="text-sm">{underwritingData.remarks}</p>
+            <div className="mt-6 grid grid-cols-2 gap-4">
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-2">Document Front</h3>
+                <img
+                  src={policyHolder.kyc.document_front}
+                  alt="Document Front"
+                  className="w-full h-48 object-cover rounded-lg"
+                />
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-2">Document Back</h3>
+                <img
+                  src={policyHolder.kyc.document_back}
+                  alt="Document Back"
+                  className="w-full h-48 object-cover rounded-lg"
+                />
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-2">Profile Photo</h3>
+                <img
+                  src={policyHolder.kyc.pp_photo}
+                  alt="Profile Photo"
+                  className="w-full h-48 object-cover rounded-lg"
+                />
+              </div>
+              {policyHolder.kyc.pan_front && (
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2">PAN Front</h3>
+                  <img
+                    src={policyHolder.kyc.pan_front}
+                    alt="PAN Front"
+                    className="w-full h-48 object-cover rounded-lg"
+                  />
                 </div>
               )}
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
+
+      <KYCDialog
+        open={isKYCDialogOpen}
+        onOpenChange={setIsKYCDialogOpen}
+        mode={policyHolder.kyc ? 'edit' : 'add'}
+        kycData={policyHolder.kyc ? {
+          ...policyHolder.kyc,
+          customer: {
+            id: policyHolder.customer.id,
+            first_name: policyHolder.customer.first_name,
+            last_name: policyHolder.customer.last_name,
+            email: policyHolder.customer.email,
+            phone_number: policyHolder.customer.phone_number
+          }
+        } : undefined}
+      />
     </div>
   );
 };

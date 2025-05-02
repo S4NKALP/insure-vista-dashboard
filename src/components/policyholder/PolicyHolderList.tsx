@@ -1,6 +1,4 @@
-
 import React from 'react';
-import { sampleData } from '@/utils/data';
 import {
   Table,
   TableBody,
@@ -9,109 +7,179 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Button } from '@/components/ui/button';
-import { Eye, Shield } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+
+interface PolicyHolder {
+  id: number;
+  policy_number: string;
+  sum_assured: string;
+  duration_years: number;
+  status: string;
+  payment_status: string;
+  start_date: string;
+  maturity_date: string;
+  customer: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone_number: string;
+    address: string;
+    gender: string;
+  };
+  branch: {
+    id: number;
+    name: string;
+    branch_code: number;
+  };
+  policy: {
+    id: number;
+    name: string;
+    policy_code: string;
+    policy_type: string;
+  };
+  agent: {
+    id: number;
+    agent_code: string;
+  };
+  kyc?: {
+    id: number;
+    document_type: string;
+    document_number: string;
+    document_front: string;
+    document_back: string;
+    pan_number: string | null;
+    pan_front: string | null;
+    pan_back: string | null;
+    pp_photo: string;
+    province: string;
+    district: string;
+    municipality: string;
+    ward: string;
+    nearest_hospital: string;
+    natural_hazard_exposure: string;
+    status: string;
+  };
+}
 
 interface PolicyHolderListProps {
   searchTerm: string;
-  onSelectPolicyHolder: (id: number) => void;
+  onSelectPolicyHolder: (policyHolder: PolicyHolder) => void;
+  canEdit?: boolean;
 }
 
-export const PolicyHolderList = ({ searchTerm, onSelectPolicyHolder }: PolicyHolderListProps) => {
-  const policyHolders = sampleData.policy_holders || [];
-  
-  const filteredPolicyHolders = policyHolders.filter(holder => 
-    holder.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    holder.policy_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    holder.policy_name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'active':
-        return 'default';
-      case 'pending':
-        return 'secondary';
-      case 'expired':
-        return 'outline';
-      default:
-        return 'secondary';
+export const PolicyHolderList: React.FC<PolicyHolderListProps> = ({
+  searchTerm,
+  onSelectPolicyHolder,
+  canEdit = false,
+}) => {
+  // Mock data based on data.json format
+  const policyHolders: PolicyHolder[] = [
+    {
+      id: 1,
+      policy_number: "1751451440001",
+      sum_assured: "5000000.00",
+      duration_years: 10,
+      status: "Active",
+      payment_status: "Partially Paid",
+      start_date: "2025-04-29",
+      maturity_date: "2035-04-29",
+      customer: {
+        id: 1,
+        first_name: "Nur Pratap",
+        last_name: "Karki",
+        email: "nurprtapkarki@gmail.com",
+        phone_number: "9840693765",
+        address: "Kohalpur, 11 Banke",
+        gender: "M"
+      },
+      branch: {
+        id: 1,
+        name: "Kohalpur Branch",
+        branch_code: 145
+      },
+      policy: {
+        id: 1,
+        name: "Saral Jiwan Beema",
+        policy_code: "144",
+        policy_type: "Endownment"
+      },
+      agent: {
+        id: 1,
+        agent_code: "A-1-0006"
+      },
+      kyc: {
+        id: 1,
+        document_type: "Citizenship",
+        document_number: "10000",
+        document_front: "http://127.0.0.1:8000/media/customer_kyc/WhatsApp_Image_2025-04-18_at_8.45.25_PM.jpeg",
+        document_back: "http://127.0.0.1:8000/media/customer_kyc/WhatsApp_Image_2025-04-18_at_8_72Tm8cT.45.25_PM.jpeg",
+        pan_number: null,
+        pan_front: null,
+        pan_back: null,
+        pp_photo: "http://127.0.0.1:8000/media/customer_kyc/WhatsApp_Image_2025-04-18_at_8_jM6Q6rt.45.25_PM.jpeg",
+        province: "Lumbini",
+        district: "Banke",
+        municipality: "Kohalpur",
+        ward: "10",
+        nearest_hospital: "Nepaljung Medical collage, Kohalpur",
+        natural_hazard_exposure: "low",
+        status: "Pending"
+      }
     }
-  };
+  ];
 
-  const getPaymentStatusBadgeVariant = (status: string) => {
-    switch (status.toLowerCase().replace(' ', '-')) {
-      case 'paid':
-        return 'default';
-      case 'partially-paid':
-        return 'secondary';
-      case 'unpaid':
-        return 'destructive';
-      default:
-        return 'secondary';
-    }
-  };
+  const filteredPolicyHolders = policyHolders.filter(holder => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      holder.policy_number.toLowerCase().includes(searchLower) ||
+      holder.customer.first_name.toLowerCase().includes(searchLower) ||
+      holder.customer.last_name.toLowerCase().includes(searchLower) ||
+      holder.customer.email.toLowerCase().includes(searchLower) ||
+      holder.customer.phone_number?.toLowerCase().includes(searchLower) ||
+      holder.policy.name.toLowerCase().includes(searchLower)
+    );
+  });
 
   return (
-    <div>
-      {filteredPolicyHolders.length === 0 ? (
-        <p className="text-center py-6 text-muted-foreground">
-          {searchTerm ? "No policy holders match your search." : "No policy holders available."}
-        </p>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Policy #</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Policy</TableHead>
-              <TableHead>Sum Assured</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Payment Status</TableHead>
-              <TableHead>Risk Category</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Policy Number</TableHead>
+            <TableHead>Name</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>Policy</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Action</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {filteredPolicyHolders.map((holder) => (
+            <TableRow key={holder.id}>
+              <TableCell className="font-medium">{holder.policy_number}</TableCell>
+              <TableCell>{`${holder.customer.first_name} ${holder.customer.last_name}`}</TableCell>
+              <TableCell>{holder.customer.email}</TableCell>
+              <TableCell>{holder.policy.name}</TableCell>
+              <TableCell>
+                <Badge variant={holder.status === 'Active' ? 'default' : 'secondary'}>
+                  {holder.status}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onSelectPolicyHolder(holder)}
+                >
+                  View Details
+                </Button>
+              </TableCell>
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredPolicyHolders.map((holder) => (
-              <TableRow key={holder.id}>
-                <TableCell className="font-medium">{holder.policy_number}</TableCell>
-                <TableCell>{holder.customer_name}</TableCell>
-                <TableCell>{holder.policy_name}</TableCell>
-                <TableCell>Rs. {Number(holder.sum_assured).toLocaleString()}</TableCell>
-                <TableCell>
-                  <Badge variant={getStatusBadgeVariant(holder.status)}>
-                    {holder.status}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={getPaymentStatusBadgeVariant(holder.payment_status)}>
-                    {holder.payment_status}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  {sampleData.underwriting.find(u => u.policy_holder === holder.id)?.risk_category || 'Not Assessed'}
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex space-x-2 justify-end">
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => onSelectPolicyHolder(holder.id)}
-                    >
-                      <Shield className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon">
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 };

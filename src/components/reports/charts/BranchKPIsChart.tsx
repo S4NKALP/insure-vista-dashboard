@@ -1,9 +1,8 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
-  BarChart, 
-  Bar, 
+  LineChart, 
+  Line, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
@@ -11,6 +10,7 @@ import {
   Legend, 
   ResponsiveContainer 
 } from 'recharts';
+import { sampleData } from '@/utils/data';
 
 interface BranchKPIsChartProps {
   branchId: number;
@@ -18,57 +18,92 @@ interface BranchKPIsChartProps {
 }
 
 export const BranchKPIsChart: React.FC<BranchKPIsChartProps> = ({ branchId, timeRange }) => {
-  // Generate data based on the selected time range
-  const data = generateBranchKPIData(timeRange);
+  // Generate data based on timeRange
+  const data = generateBranchKPIData(timeRange, branchId);
   
   return (
     <Card className="h-[400px]">
       <CardHeader>
-        <CardTitle>Branch Performance Metrics</CardTitle>
+        <CardTitle>Key Performance Metrics</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="h-[320px]">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart
+          <LineChart
             data={data}
-            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis />
+            <XAxis dataKey="period" />
+            <YAxis yAxisId="left" />
+            <YAxis yAxisId="right" orientation="right" />
             <Tooltip />
             <Legend />
-            <Bar name="New Policies" dataKey="newPolicies" stackId="a" fill="#8884d8" />
-            <Bar name="Renewed Policies" dataKey="renewedPolicies" stackId="a" fill="#82ca9d" />
-            <Bar name="Claims" dataKey="claims" fill="#ffc658" />
-          </BarChart>
+            <Line
+              yAxisId="left"
+              type="monotone"
+              dataKey="policies"
+              stroke="#8884d8"
+              name="Policies Issued"
+              activeDot={{ r: 8 }}
+            />
+            <Line
+              yAxisId="left"
+              type="monotone"
+              dataKey="customers"
+              stroke="#ff8042"
+              name="New Customers"
+            />
+            <Line
+              yAxisId="right"
+              type="monotone"
+              dataKey="premium"
+              stroke="#82ca9d"
+              name="Premium (thousands)"
+            />
+          </LineChart>
         </ResponsiveContainer>
       </CardContent>
     </Card>
   );
 };
 
-// Helper function to generate branch KPI data
-function generateBranchKPIData(timeRange: 'weekly' | 'monthly' | 'yearly') {
-  let labels: string[] = [];
+// Generate time series data for branch KPIs
+function generateBranchKPIData(timeRange: 'weekly' | 'monthly' | 'yearly', branchId: number) {
+  let periods: string[] = [];
   
   if (timeRange === 'weekly') {
-    labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    periods = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   } else if (timeRange === 'monthly') {
-    labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    // Use last 6 months
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const currentMonth = new Date().getMonth();
+    periods = Array(6).fill(0).map((_, i) => {
+      const monthIndex = (currentMonth - 5 + i + 12) % 12;
+      return months[monthIndex];
+    });
   } else {
-    // Yearly - use quarterly data
-    labels = ['Q1', 'Q2', 'Q3', 'Q4'];
+    // Yearly - use last 4 quarters
+    periods = ['Q1', 'Q2', 'Q3', 'Q4'];
   }
   
-  // Generate dummy data based on timeRange
-  const baseNewPolicy = timeRange === 'weekly' ? 3 : timeRange === 'monthly' ? 8 : 30;
-  const baseRenewedPolicy = timeRange === 'weekly' ? 7 : timeRange === 'monthly' ? 20 : 80;
-  const baseClaim = timeRange === 'weekly' ? 1 : timeRange === 'monthly' ? 4 : 15;
+  // Find branch data
+  const branch = sampleData.branches.find(b => b.id === branchId);
+  const branchFactor = branch ? (branch.id % 3) + 0.8 : 1; // Some branches perform better
   
-  return labels.map((name) => ({
-    name,
-    newPolicies: Math.floor(Math.random() * baseNewPolicy) + baseNewPolicy,
-    renewedPolicies: Math.floor(Math.random() * baseRenewedPolicy) + baseRenewedPolicy,
-    claims: Math.floor(Math.random() * baseClaim) + baseClaim,
-  }));
+  // Base values that scale with timeRange
+  const basePolicies = timeRange === 'weekly' ? 3 : timeRange === 'monthly' ? 12 : 45;
+  const baseCustomers = timeRange === 'weekly' ? 2 : timeRange === 'monthly' ? 8 : 30;
+  const basePremium = timeRange === 'weekly' ? 10 : timeRange === 'monthly' ? 40 : 160;
+  
+  // Create a growth pattern
+  return periods.map((period, index) => {
+    const growthFactor = 1 + (index * 0.05);
+    
+    return {
+      period,
+      policies: Math.floor(basePolicies * branchFactor * growthFactor + Math.random() * 5),
+      customers: Math.floor(baseCustomers * branchFactor * growthFactor + Math.random() * 3),
+      premium: Math.floor(basePremium * branchFactor * growthFactor + Math.random() * 10),
+    };
+  });
 }

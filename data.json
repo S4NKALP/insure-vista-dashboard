@@ -444,7 +444,40 @@
             "updated_at": "2025-04-29T09:08:53.501922Z"
         }
     ],
-    "kyc": [],
+    "kyc": [
+        {
+            "id": 1,
+            "document_type": "Citizenship",
+            "document_number": "10000",
+            "document_front": "http://127.0.0.1:8000/media/customer_kyc/WhatsApp_Image_2025-04-18_at_8.45.25_PM.jpeg",
+            "document_back": "http://127.0.0.1:8000/media/customer_kyc/WhatsApp_Image_2025-04-18_at_8_72Tm8cT.45.25_PM.jpeg",
+            "pan_number": null,
+            "pan_front": null,
+            "pan_back": null,
+            "pp_photo": "http://127.0.0.1:8000/media/customer_kyc/WhatsApp_Image_2025-04-18_at_8_jM6Q6rt.45.25_PM.jpeg",
+            "province": "Lumbini",
+            "district": "Banke",
+            "municipality": "Kohalpur",
+            "ward": "10",
+            "nearest_hospital": "Nepaljung Medical collage, Kohalpur",
+            "natural_hazard_exposure": "low",
+            "status": "Pending",
+            "customer": {
+                "id": 1,
+                "first_name": "Nur Pratap",
+                "middle_name": null,
+                "last_name": "Karki",
+                "email": "nurprtapkarki@gmail.com",
+                "phone_number": "9840693765",
+                "address": "Kohalpur, 11 Banke",
+                "profile_picture": null,
+                "gender": "M",
+                "created_at": "2025-04-29T08:06:48.280529Z",
+                "updated_at": "2025-05-01T09:21:11.825867Z",
+                "user": 2
+            }
+        }
+    ],
     "policy_holders": [
         {
             "id": 1,

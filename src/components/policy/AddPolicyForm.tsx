@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { useEffect } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -17,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
 const policyTypes = ["Endownment", "Term", "Whole Life", "Money Back"];
 
@@ -40,9 +40,11 @@ type PolicyFormValues = z.infer<typeof policySchema>;
 
 interface AddPolicyFormProps {
   onCancel: () => void;
+  initialData?: any;
+  isEditing?: boolean;
 }
 
-export const AddPolicyForm = ({ onCancel }: AddPolicyFormProps) => {
+export const AddPolicyForm = ({ onCancel, initialData = null, isEditing = false }: AddPolicyFormProps) => {
   const form = useForm<PolicyFormValues>({
     resolver: zodResolver(policySchema),
     defaultValues: {
@@ -62,10 +64,38 @@ export const AddPolicyForm = ({ onCancel }: AddPolicyFormProps) => {
     },
   });
 
+  // If initialData is provided (editing mode), set the form values
+  useEffect(() => {
+    if (initialData) {
+      // We need to convert some values to ensure they match the form's expected format
+      const formattedData = {
+        ...initialData,
+        // Convert numbers to strings if needed
+        base_multiplier: String(initialData.base_multiplier),
+        min_sum_assured: String(initialData.min_sum_assured),
+        max_sum_assured: String(initialData.max_sum_assured),
+        adb_percentage: String(initialData.adb_percentage),
+        ptd_percentage: String(initialData.ptd_percentage),
+        guaranteed_interest_rate: String(initialData.guaranteed_interest_rate),
+        terminal_bonus_rate: String(initialData.terminal_bonus_rate),
+      };
+      
+      Object.entries(formattedData).forEach(([key, value]) => {
+        if (key in form.getValues()) {
+          form.setValue(key as any, value);
+        }
+      });
+    }
+  }, [initialData, form]);
+
   const onSubmit = (values: PolicyFormValues) => {
     console.log(values);
     // Here you would typically send the data to your backend
-    // For now, we'll just log it and cancel the form
+    if (isEditing) {
+      toast.success("Policy updated successfully");
+    } else {
+      toast.success("Policy added successfully");
+    }
     onCancel();
   };
 
@@ -297,7 +327,9 @@ export const AddPolicyForm = ({ onCancel }: AddPolicyFormProps) => {
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="submit">Save Policy</Button>
+          <Button type="submit">
+            {isEditing ? "Update Policy" : "Add Policy"}
+          </Button>
         </div>
       </form>
     </Form>

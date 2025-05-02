@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -24,6 +23,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent } from '@/components/ui/card';
+import { formatCurrency } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface AddLoanDialogProps {
   open: boolean;
@@ -31,19 +33,28 @@ interface AddLoanDialogProps {
 }
 
 const formSchema = z.object({
-  policyId: z.string().min(1, { message: 'Policy ID is required' }),
-  loanType: z.string().min(1, { message: 'Loan type is required' }),
-  amount: z.string().min(1, { message: 'Amount is required' }),
+  policy_holder: z.string().min(1, { message: 'Policy holder is required' }),
+  loan_amount: z.string()
+    .min(1, { message: 'Loan amount is required' })
+    .refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
+      message: 'Amount must be a positive number'
+    }),
+  interest_rate: z.string()
+    .min(1, { message: 'Interest rate is required' })
+    .refine((val) => !isNaN(Number(val)) && Number(val) >= 0 && Number(val) <= 100, {
+      message: 'Interest rate must be between 0 and 100'
+    }),
   reason: z.string().min(10, { message: 'Reason must be at least 10 characters long' }),
 });
 
 export const AddLoanDialog: React.FC<AddLoanDialogProps> = ({ open, onOpenChange }) => {
+  const { user } = useAuth();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      policyId: '',
-      loanType: '',
-      amount: '',
+      policy_holder: '',
+      loan_amount: '',
+      interest_rate: '',
       reason: '',
     },
   });
@@ -60,97 +71,122 @@ export const AddLoanDialog: React.FC<AddLoanDialogProps> = ({ open, onOpenChange
     form.reset();
   };
 
+  const calculateMonthlyPayment = () => {
+    const amount = Number(form.watch('loan_amount')) || 0;
+    const interestRate = Number(form.watch('interest_rate')) || 0;
+    const monthlyRate = interestRate / 100 / 12;
+    const term = 12; // Default to 12 months for calculation
+    const monthlyPayment = (amount * monthlyRate * Math.pow(1 + monthlyRate, term)) / 
+      (Math.pow(1 + monthlyRate, term) - 1);
+    return monthlyPayment;
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Apply for Loan</DialogTitle>
+          <DialogTitle>New Loan Application</DialogTitle>
           <DialogDescription>
-            Fill in the details to apply for a new policy loan.
+            Fill in the details to apply for a new loan. All fields marked with * are required.
           </DialogDescription>
         </DialogHeader>
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="policyId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Policy ID</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a policy" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="pol-term-001">POL-TERM-001 (Term Life)</SelectItem>
-                      <SelectItem value="pol-end-003">POL-END-003 (Endowment)</SelectItem>
-                      <SelectItem value="pol-end-005">POL-END-005 (Endowment Plus)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField
+                control={form.control}
+                name="policy_holder"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Policy Holder *</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a policy holder" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="1">Nur Pratap Karki (1751451440001)</SelectItem>
+                        <SelectItem value="2">Sumitra Bam (1751451440002)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="loanType"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Loan Type</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    defaultValue={field.value}
-                  >
+              <FormField
+                control={form.control}
+                name="loan_amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Loan Amount (Rs.) *</FormLabel>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select loan type" />
-                      </SelectTrigger>
+                      <Input type="number" placeholder="Enter amount" {...field} />
                     </FormControl>
-                    <SelectContent>
-                      <SelectItem value="Policy Loan">Policy Loan</SelectItem>
-                      <SelectItem value="Mortgage Loan">Mortgage Loan</SelectItem>
-                      <SelectItem value="Personal Loan">Personal Loan</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Loan Amount (Rs.)</FormLabel>
-                  <FormControl>
-                    <Input type="number" placeholder="Enter amount" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="interest_rate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Interest Rate (%) *</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.1" placeholder="Enter interest rate" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
               name="reason"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Reason for Loan</FormLabel>
+                  <FormLabel>Reason for Loan *</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Explain why you need this loan" {...field} />
+                    <Textarea 
+                      placeholder="Explain why you need this loan" 
+                      className="min-h-[100px]"
+                      {...field} 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
+            <Card>
+              <CardContent className="pt-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Monthly Payment</p>
+                    <p className="text-lg font-semibold">
+                      {formatCurrency(calculateMonthlyPayment())}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Interest</p>
+                    <p className="text-lg font-semibold">
+                      {formatCurrency(
+                        calculateMonthlyPayment() * 12 - 
+                        Number(form.watch('loan_amount') || 0)
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             <DialogFooter>
               <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>

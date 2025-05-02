@@ -1,8 +1,8 @@
-
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePermissions } from '@/contexts/PermissionsContext';
 import { Shield } from 'lucide-react';
 import {
   LayoutDashboard,
@@ -15,7 +15,15 @@ import {
   ChartBar,
   User,
   Banknote,
+  Receipt,
 } from 'lucide-react';
+
+interface NavItem {
+  path: string;
+  icon: React.ReactNode;
+  label: string;
+  permission?: string;
+}
 
 interface SideNavbarProps {
   collapsed: boolean;
@@ -23,34 +31,33 @@ interface SideNavbarProps {
 
 export const SideNavbar: React.FC<SideNavbarProps> = ({ collapsed }) => {
   const { user } = useAuth();
+  const { isSuperAdmin, isBranchAdmin, hasPermission } = usePermissions();
   
-  const isSuperadmin = user?.role === 'superadmin';
-  
-  const superadminLinks = [
+  // Navigation items with permissions
+  const navItems: NavItem[] = [
     { path: '/dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
-    { path: '/agents', icon: <User size={20} />, label: 'Agents' },
-    { path: '/branches', icon: <Building size={20} />, label: 'Branches' },
-    { path: '/users', icon: <Users size={20} />, label: 'Users' },
-    { path: '/policies', icon: <FileText size={20} />, label: 'Policies' },
-    { path: '/loans', icon: <Banknote size={20} />, label: 'Loans' },
-    { path: '/claims', icon: <ClipboardCheck size={20} />, label: 'Claims' },
-    { path: '/payments', icon: <CreditCard size={20} />, label: 'Payments' },
+    { path: '/agents', icon: <User size={20} />, label: 'Agents', permission: 'view_agents' },
+    { path: '/branches', icon: <Building size={20} />, label: 'Branches', permission: 'view_all_branches' },
+    { path: '/users', icon: <Users size={20} />, label: 'Users', permission: 'view_all_customers' },
+    { path: '/customers', icon: <Users size={20} />, label: 'Customers', permission: 'view_customers' },
+    { path: '/policies', icon: <FileText size={20} />, label: 'Insurance Policies', permission: 'view_policies' },
+    { path: '/policy-holders', icon: <FileText size={20} />, label: 'Policy Holders', permission: 'view_policy_holders' },
+    { path: '/loans', icon: <Banknote size={20} />, label: 'Loans', permission: 'view_loans' },
+    { path: '/claims', icon: <ClipboardCheck size={20} />, label: 'Claims', permission: 'view_claims' },
+    { path: '/payments', icon: <CreditCard size={20} />, label: 'Payments', permission: 'view_claims' },
+    { path: '/premium-payments', icon: <Receipt size={20} />, label: 'Premium Payments', permission: 'view_premium_payments' },
     { path: '/reports', icon: <ChartBar size={20} />, label: 'Reports' },
-    { path: '/settings', icon: <Settings size={20} />, label: 'Settings' },
+    { path: '/settings', icon: <Settings size={20} />, label: 'Settings', permission: 'manage_configuration' },
   ];
   
-  const branchLinks = [
-    { path: '/dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
-    { path: '/customers', icon: <Users size={20} />, label: 'Customers' },
-    { path: '/agents', icon: <User size={20} />, label: 'Agents' },
-    { path: '/policy-holders', icon: <FileText size={20} />, label: 'Policy Holders' },
-    { path: '/loans', icon: <Banknote size={20} />, label: 'Loans' },
-    { path: '/claims', icon: <ClipboardCheck size={20} />, label: 'Claims' },
-    { path: '/payments', icon: <CreditCard size={20} />, label: 'Payments' },
-    { path: '/reports', icon: <ChartBar size={20} />, label: 'Reports' },
-  ];
-  
-  const links = isSuperadmin ? superadminLinks : branchLinks;
+  // Filter navigation items based on permissions
+  const filteredLinks = navItems.filter(item => {
+    // If no permission is required, show the item
+    if (!item.permission) return true;
+    
+    // Check if the user has the required permission
+    return hasPermission(item.permission as any);
+  });
   
   return (
     <aside
@@ -75,7 +82,7 @@ export const SideNavbar: React.FC<SideNavbarProps> = ({ collapsed }) => {
       {/* Navigation */}
       <nav className="flex-1 p-2 overflow-y-auto">
         <ul className="space-y-1">
-          {links.map((link) => (
+          {filteredLinks.map((link) => (
             <li key={link.path}>
               <NavLink
                 to={link.path}
@@ -104,9 +111,14 @@ export const SideNavbar: React.FC<SideNavbarProps> = ({ collapsed }) => {
           {!collapsed && (
             <>
               <p className="font-semibold capitalize">
-                {user?.role === 'superadmin' ? 'Super Admin' : user?.role}
+                {isSuperAdmin ? 'Super Admin' : (isBranchAdmin ? 'Branch Admin' : user?.role)}
               </p>
-              <p className="text-xs mt-1 opacity-75">{user?.fullName}</p>
+              <p className="text-xs mt-1 opacity-75">
+                {user?.fullName}
+                {isBranchAdmin && user?.branchName && (
+                  <span className="block mt-1">{user.branchName}</span>
+                )}
+              </p>
             </>
           )}
         </div>

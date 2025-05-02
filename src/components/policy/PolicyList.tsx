@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { sampleData } from '@/utils/data';
 import {
@@ -15,9 +14,11 @@ import { Badge } from '@/components/ui/badge';
 
 interface PolicyListProps {
   searchTerm: string;
+  onView: (policy: any) => void;
+  onEdit: ((policy: any) => void) | null;
 }
 
-export const PolicyList = ({ searchTerm }: PolicyListProps) => {
+export const PolicyList = ({ searchTerm, onView, onEdit }: PolicyListProps) => {
   const policies = sampleData.insurance_policies || [];
   
   const filteredPolicies = policies.filter(policy => 
@@ -58,12 +59,22 @@ export const PolicyList = ({ searchTerm }: PolicyListProps) => {
                 <TableCell>{(Number(policy.guaranteed_interest_rate) * 100).toFixed(2)}%</TableCell>
                 <TableCell>
                   <div className="flex space-x-2">
-                    <Button variant="ghost" size="icon">
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => onView(policy)}
+                    >
                       <Eye className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon">
-                      <Edit className="h-4 w-4" />
-                    </Button>
+                    {onEdit && (
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => onEdit(policy)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>

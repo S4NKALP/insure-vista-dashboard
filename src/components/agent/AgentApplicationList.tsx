@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   Card,
@@ -23,9 +22,19 @@ import {
   Dialog, 
   DialogContent, 
   DialogHeader, 
-  DialogTitle 
+  DialogTitle,
+  DialogTrigger 
 } from "@/components/ui/dialog";
 import { AgentApplicationDetails } from "@/components/agent/AgentApplicationDetails";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { AgentApplicationForm } from './AgentApplicationForm';
+import { toast } from 'sonner';
 
 // Mock data for agent applications
 const sampleApplications = [
@@ -68,146 +77,224 @@ const sampleApplications = [
   },
 ];
 
-interface AgentApplicationListProps {
-  isSuperAdmin: boolean;
-  branchId?: string;
+interface AgentApplication {
+  id: number;
+  branch_name: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone_number: string;
+  status: string;
+  created_at: string;
 }
 
-export const AgentApplicationList = ({ isSuperAdmin, branchId }: AgentApplicationListProps) => {
+interface AgentApplicationListProps {
+  isSuperAdmin: boolean;
+  branchId?: number;
+}
+
+export function AgentApplicationList({ isSuperAdmin, branchId }: AgentApplicationListProps) {
   const { toast } = useToast();
-  const [searchTerm, setSearchTerm] = useState("");
+  const [applications, setApplications] = useState<AgentApplication[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [selectedApplication, setSelectedApplication] = useState<any>(null);
   
-  // Filter applications based on search term and branch constraints
-  const filteredApplications = sampleApplications
-    .filter(application => {
-      // Filter by branch if not superadmin
-      if (branchId) {
-        return application.branchId === branchId;
-      }
-      return true;
-    })
-    .filter(application => {
-      if (!searchTerm) return true;
-      
-      return (
-        application.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        application.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        application.phone.includes(searchTerm)
-      );
-    });
+  const handleSubmitApplication = async (data: any) => {
+    try {
+      // TODO: Implement API call to submit application
+      const newApplication = {
+        id: applications.length + 1,
+        branch_name: branchId ? 'Current Branch' : 'All Branches',
+        ...data,
+        status: 'Pending',
+        created_at: new Date().toISOString().split('T')[0],
+      };
+      setApplications([...applications, newApplication]);
+      setIsFormOpen(false);
+      toast({
+        title: "Success",
+        description: "Application submitted successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to submit application",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleStatusChange = async (applicationId: number, newStatus: string) => {
+    try {
+      // TODO: Implement API call to update status
+      setApplications(applications.map(app => 
+        app.id === applicationId ? { ...app, status: newStatus } : app
+      ));
+      toast({
+        title: "Success",
+        description: "Status updated successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const filteredApplications = applications.filter(app => {
+    const matchesSearch = 
+      app.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.phone_number.includes(searchTerm);
     
+    const matchesStatus = statusFilter === 'all' || app.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
+
   const viewApplicationDetails = (application: any) => {
     setSelectedApplication(application);
     setIsDetailsDialogOpen(true);
   };
-  
-  const handleApproveApplication = (applicationId: string) => {
-    // In a real app, you would call an API to approve the application
-    toast({
-      title: "Application Approved",
-      description: "The agent application has been approved.",
-    });
-  };
-  
-  const handleRejectApplication = (applicationId: string) => {
-    // In a real app, you would call an API to reject the application
-    toast({
-      title: "Application Rejected",
-      description: "The agent application has been rejected.",
-    });
-  };
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle>Agent Applications</CardTitle>
-        <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search applications..."
-            className="pl-8 w-[250px]"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Contact</TableHead>
-              {isSuperAdmin && <TableHead>Branch</TableHead>}
-              <TableHead>Status</TableHead>
-              <TableHead>Experience</TableHead>
-              <TableHead>Applied On</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredApplications.length > 0 ? (
-              filteredApplications.map((application) => (
-                <TableRow key={application.id}>
-                  <TableCell className="font-medium">{application.name}</TableCell>
-                  <TableCell>
-                    <div>{application.email}</div>
-                    <div className="text-sm text-muted-foreground">{application.phone}</div>
-                  </TableCell>
-                  {isSuperAdmin && <TableCell>{application.branchName}</TableCell>}
-                  <TableCell>
-                    <Badge 
-                      variant={
-                        application.status === 'pending' ? "default" : 
-                        application.status === 'approved' ? "outline" : "destructive"
-                      }
-                      className={application.status === 'approved' ? "bg-green-100 text-green-800 hover:bg-green-200" : ""}
-                    >
-                      {application.status === 'pending' ? 'Pending' : 
-                       application.status === 'approved' ? 'Approved' : 'Rejected'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{application.experience}</TableCell>
-                  <TableCell>{new Date(application.applicationDate).toLocaleDateString()}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => viewApplicationDetails(application)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      {application.status === 'pending' && (
-                        <>
-                          <Button variant="ghost" size="sm" onClick={() => handleApproveApplication(application.id)}>
-                            <UserCheck className="h-4 w-4 text-green-500" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleRejectApplication(application.id)}>
-                            <UserX className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </TableCell>
+    <div className="w-4/5 mx-auto max-h-[80vh] flex flex-col">
+      <Card className="w-full shadow-md">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Agent Applications</CardTitle>
+          <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+            <DialogTrigger asChild>
+              <Button>New Application</Button>
+            </DialogTrigger>
+            <DialogContent className="w-4/5 max-w-4xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>New Agent Application</DialogTitle>
+              </DialogHeader>
+              <AgentApplicationForm onSubmit={handleSubmitApplication} branchId={branchId} />
+            </DialogContent>
+          </Dialog>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col md:flex-row gap-4 mb-4">
+            <div className="relative w-full md:w-64">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
+              <Input
+                placeholder="Search applications..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-8"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full md:w-48">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="Pending">Pending</SelectItem>
+                <SelectItem value="Approved">Approved</SelectItem>
+                <SelectItem value="Rejected">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="rounded-md border overflow-auto max-h-[60vh]">
+            <Table>
+              <TableHeader className="sticky top-0 bg-white">
+                <TableRow>
+                  <TableHead className="w-1/6">Name</TableHead>
+                  <TableHead className="w-1/6">Email</TableHead>
+                  <TableHead className="w-1/6">Phone</TableHead>
+                  <TableHead className="w-1/6">Branch</TableHead>
+                  <TableHead className="w-1/12">Status</TableHead>
+                  <TableHead className="w-1/12">Date</TableHead>
+                  <TableHead className="w-1/4">Actions</TableHead>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={isSuperAdmin ? 7 : 6} className="text-center py-8 text-muted-foreground">
-                  No applications found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-        
-        <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>Application Details</DialogTitle>
-            </DialogHeader>
-            {selectedApplication && <AgentApplicationDetails application={selectedApplication} />}
-          </DialogContent>
-        </Dialog>
-      </CardContent>
-    </Card>
+              </TableHeader>
+              <TableBody>
+                {filteredApplications.length > 0 ? (
+                  filteredApplications.map((application) => (
+                    <TableRow key={application.id}>
+                      <TableCell className="font-medium truncate max-w-xs">
+                        {`${application.first_name} ${application.last_name}`}
+                      </TableCell>
+                      <TableCell className="truncate max-w-xs">{application.email}</TableCell>
+                      <TableCell>{application.phone_number}</TableCell>
+                      <TableCell>{application.branch_name}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            application.status === 'Approved'
+                              ? 'default'
+                              : application.status === 'Rejected'
+                              ? 'destructive'
+                              : 'secondary'
+                          }
+                        >
+                          {application.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{application.created_at}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-2 flex-wrap">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => viewApplicationDetails(application)}
+                          >
+                            <Eye className="h-4 w-4 mr-1" /> View
+                          </Button>
+                          {application.status === 'Pending' && (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleStatusChange(application.id, 'Approved')}
+                                className="text-green-600 border-green-600 hover:bg-green-50"
+                              >
+                                <UserCheck className="h-4 w-4 mr-1" /> Approve
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleStatusChange(application.id, 'Rejected')}
+                                className="text-red-600 border-red-600 hover:bg-red-50"
+                              >
+                                <UserX className="h-4 w-4 mr-1" /> Reject
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-24 text-center">
+                      No applications found
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          
+          <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+            <DialogContent className="w-4/5 max-w-2xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Application Details</DialogTitle>
+              </DialogHeader>
+              {selectedApplication && <AgentApplicationDetails application={selectedApplication} />}
+            </DialogContent>
+          </Dialog>
+        </CardContent>
+      </Card>
+    </div>
   );
-};
+}
