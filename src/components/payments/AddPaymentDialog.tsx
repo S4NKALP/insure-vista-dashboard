@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Dialog,
@@ -66,7 +65,7 @@ export const AddPaymentDialog = ({ open, onOpenChange }: AddPaymentDialogProps) 
   const handleAddPremiumPayment = (data: any) => {
     toast({
       title: "Premium payment added",
-      description: `Premium payment for policy ${data.policyNumber} has been recorded`,
+      description: `Premium payment of ${data.amount} for policy ${data.policyNumber} has been recorded`,
     });
     onOpenChange(false);
   };
@@ -74,10 +73,23 @@ export const AddPaymentDialog = ({ open, onOpenChange }: AddPaymentDialogProps) 
   const handleAddClaimPayment = (data: any) => {
     toast({
       title: "Claim payment added",
-      description: `Claim payment for claim ${data.claimId} has been processed`,
+      description: `Claim payment of ${data.amount} for claim ${data.claimId} has been processed`,
     });
     onOpenChange(false);
   };
+  
+  // Mock policy holders for dropdown select
+  const policyHolders = [
+    { number: "1751451440001", name: "Nur Pratap Karki" },
+    { number: "1751451440002", name: "Sumitra Bam" },
+    { number: "1751451440003", name: "Sankalp Tharu" },
+  ];
+  
+  // Mock claims for dropdown select
+  const claims = [
+    { id: "Claim #1", policyNumber: "1751451440002", customerName: "Sumitra Bam" },
+    { id: "Claim #2", policyNumber: "1751451440001", customerName: "Nur Pratap Karki" },
+  ];
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -106,7 +118,23 @@ export const AddPaymentDialog = ({ open, onOpenChange }: AddPaymentDialogProps) 
                       <FormItem>
                         <FormLabel>Policy Number</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="Enter policy number" required />
+                          <Select 
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select policy" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectGroup>
+                                {policyHolders.map(policy => (
+                                  <SelectItem key={policy.number} value={policy.number}>
+                                    {policy.number} - {policy.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            </SelectContent>
+                          </Select>
                         </FormControl>
                       </FormItem>
                     )}
@@ -214,7 +242,29 @@ export const AddPaymentDialog = ({ open, onOpenChange }: AddPaymentDialogProps) 
                       <FormItem>
                         <FormLabel>Claim ID</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="Enter claim ID" required />
+                          <Select 
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              const claim = claims.find(c => c.id === value);
+                              if (claim) {
+                                claimForm.setValue('policyNumber', claim.policyNumber);
+                              }
+                            }}
+                            defaultValue={field.value}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select claim" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectGroup>
+                                {claims.map(claim => (
+                                  <SelectItem key={claim.id} value={claim.id}>
+                                    {claim.id} - {claim.customerName}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            </SelectContent>
+                          </Select>
                         </FormControl>
                       </FormItem>
                     )}
@@ -227,7 +277,7 @@ export const AddPaymentDialog = ({ open, onOpenChange }: AddPaymentDialogProps) 
                       <FormItem>
                         <FormLabel>Policy Number</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="Enter policy number" required />
+                          <Input {...field} placeholder="Policy number" readOnly />
                         </FormControl>
                       </FormItem>
                     )}
@@ -289,8 +339,8 @@ export const AddPaymentDialog = ({ open, onOpenChange }: AddPaymentDialogProps) 
                             <SelectContent>
                               <SelectGroup>
                                 <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
-                                <SelectItem value="Cash">Cash</SelectItem>
                                 <SelectItem value="Check">Check</SelectItem>
+                                <SelectItem value="Direct Deposit">Direct Deposit</SelectItem>
                               </SelectGroup>
                             </SelectContent>
                           </Select>
@@ -320,6 +370,19 @@ export const AddPaymentDialog = ({ open, onOpenChange }: AddPaymentDialogProps) 
                         <FormLabel>Transaction ID</FormLabel>
                         <FormControl>
                           <Input {...field} placeholder="Enter transaction ID" />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={claimForm.control}
+                    name="notes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Notes</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Add notes (optional)" />
                         </FormControl>
                       </FormItem>
                     )}

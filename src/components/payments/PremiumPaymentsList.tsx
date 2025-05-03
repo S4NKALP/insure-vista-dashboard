@@ -17,6 +17,7 @@ import { Eye, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate, formatCurrency } from '@/lib/utils';
 import { PaymentDetailsDialog } from './PaymentDetailsDialog';
+import { EditPaymentDialog } from './EditPaymentDialog';
 
 // Define interface based on data.json premium_payments
 interface PremiumPayment {
@@ -39,15 +40,18 @@ interface PremiumPayment {
 
 interface PremiumPaymentsListProps {
   canEdit: boolean;
+  filter?: string;
+  searchTerm?: string;
 }
 
-export const PremiumPaymentsList = ({ canEdit }: PremiumPaymentsListProps) => {
+export const PremiumPaymentsList = ({ canEdit, filter = 'all', searchTerm = '' }: PremiumPaymentsListProps) => {
   const { toast } = useToast();
   const [selectedPayment, setSelectedPayment] = React.useState<PremiumPayment | null>(null);
   const [detailsOpen, setDetailsOpen] = React.useState(false);
+  const [editOpen, setEditOpen] = React.useState(false);
   
   // Mock data based on data.json
-  const premiumPayments: PremiumPayment[] = [
+  const allPremiumPayments: PremiumPayment[] = [
     {
       id: 3,
       policy_holder_number: "1751451440001",
@@ -81,19 +85,50 @@ export const PremiumPaymentsList = ({ canEdit }: PremiumPaymentsListProps) => {
       ssv_value: "0.00",
       payment_status: "Partially Paid",
       policy_holder: 2
+    },
+    // Add a paid payment for demonstration
+    {
+      id: 5,
+      policy_holder_number: "1751451440003",
+      customer_name: "Sankalp Tharu",
+      annual_premium: "50000.00",
+      interval_payment: "50000.00",
+      total_paid: "50000.00",
+      paid_amount: "0.00",
+      next_payment_date: "2026-05-15",
+      fine_due: "0.00",
+      total_premium: "50000.00",
+      remaining_premium: "0.00",
+      gsv_value: "0.00",
+      ssv_value: "0.00",
+      payment_status: "Paid",
+      policy_holder: 3
     }
   ];
+  
+  // Filter premium payments based on status and search term
+  const filteredPayments = allPremiumPayments
+    .filter(payment => {
+      if (filter === 'all') return true;
+      return payment.payment_status === filter;
+    })
+    .filter(payment => {
+      if (!searchTerm) return true;
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        payment.policy_holder_number.toLowerCase().includes(searchLower) ||
+        payment.customer_name.toLowerCase().includes(searchLower)
+      );
+    });
   
   const handleViewPayment = (payment: PremiumPayment) => {
     setSelectedPayment(payment);
     setDetailsOpen(true);
   };
   
-  const handleMarkPaid = (payment: PremiumPayment) => {
-    toast({
-      title: "Payment marked as paid",
-      description: `Payment for policy ${payment.policy_holder_number} has been marked as paid`,
-    });
+  const handleEditPayment = (payment: PremiumPayment) => {
+    setSelectedPayment(payment);
+    setEditOpen(true);
   };
   
   const getStatusColor = (status: string) => {
@@ -103,6 +138,7 @@ export const PremiumPaymentsList = ({ canEdit }: PremiumPaymentsListProps) => {
       case 'Partially Paid':
         return { variant: "secondary", className: "" };
       case 'Unpaid':
+      case 'Pending':
         return { variant: "default", className: "" };
       default:
         return { variant: "default", className: "" };
@@ -127,53 +163,69 @@ export const PremiumPaymentsList = ({ canEdit }: PremiumPaymentsListProps) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {premiumPayments.map((payment) => {
-                const statusStyle = getStatusColor(payment.payment_status);
-                return (
-                  <TableRow key={payment.id}>
-                    <TableCell className="font-medium">{payment.policy_holder_number}</TableCell>
-                    <TableCell>{payment.customer_name}</TableCell>
-                    <TableCell>{formatCurrency(parseFloat(payment.annual_premium))}</TableCell>
-                    <TableCell>{formatCurrency(parseFloat(payment.total_paid))}</TableCell>
-                    <TableCell>{formatCurrency(parseFloat(payment.remaining_premium))}</TableCell>
-                    <TableCell>{formatDate(payment.next_payment_date)}</TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant={statusStyle.variant as any}
-                        className={statusStyle.className}
-                      >
-                        {payment.payment_status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => handleViewPayment(payment)}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        
-                        {canEdit && payment.payment_status !== 'Paid' && (
-                          <Button variant="ghost" size="sm" onClick={() => handleMarkPaid(payment)}>
-                            <Edit className="h-4 w-4" />
+              {filteredPayments.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-4">
+                    No payments found matching the filters
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredPayments.map((payment) => {
+                  const statusStyle = getStatusColor(payment.payment_status);
+                  return (
+                    <TableRow key={payment.id}>
+                      <TableCell className="font-medium">{payment.policy_holder_number}</TableCell>
+                      <TableCell>{payment.customer_name}</TableCell>
+                      <TableCell>{formatCurrency(parseFloat(payment.annual_premium))}</TableCell>
+                      <TableCell>{formatCurrency(parseFloat(payment.total_paid))}</TableCell>
+                      <TableCell>{formatCurrency(parseFloat(payment.remaining_premium))}</TableCell>
+                      <TableCell>{formatDate(payment.next_payment_date)}</TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={statusStyle.variant as any}
+                          className={statusStyle.className}
+                        >
+                          {payment.payment_status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="sm" onClick={() => handleViewPayment(payment)}>
+                            <Eye className="h-4 w-4" />
                           </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+                          
+                          {canEdit && payment.payment_status !== 'Paid' && (
+                            <Button variant="ghost" size="sm" onClick={() => handleEditPayment(payment)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
       
       {selectedPayment && (
-        <PaymentDetailsDialog
-          open={detailsOpen}
-          onOpenChange={setDetailsOpen}
-          payment={selectedPayment}
-          canEdit={canEdit}
-          type="premium"
-        />
+        <>
+          <PaymentDetailsDialog
+            open={detailsOpen}
+            onOpenChange={setDetailsOpen}
+            payment={selectedPayment}
+            canEdit={canEdit}
+            type="premium"
+          />
+          
+          <EditPaymentDialog
+            open={editOpen}
+            onOpenChange={setEditOpen}
+            payment={selectedPayment}
+          />
+        </>
       )}
     </>
   );

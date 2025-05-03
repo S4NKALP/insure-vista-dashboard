@@ -11,6 +11,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import PermissionGate from '@/components/PermissionGate';
 import { LoansDashboard } from '@/components/loans/LoansDashboard';
+import { formatCurrency } from '@/lib/utils';
+import appData from '@/api/mock/data';
 
 import { FileText, Users, User, CreditCard, AlertTriangle } from 'lucide-react';
 
@@ -18,13 +20,78 @@ const Dashboard = () => {
   const { user } = useAuth();
   const { isSuperAdmin, isBranchAdmin } = usePermissions();
   
-  // In a real app, these would come from an API
-  const loanStats = {
-    totalActiveLoans: 1,
-    totalLoanAmount: 25000,
-    totalRepayments: 12000,
-    pendingApprovals: 0,
+  // Calculate dashboard statistics from actual data
+  const calculateDashboardStats = () => {
+    // Total policies
+    const totalPolicies = appData.policy_holders.length;
+    
+    // Active policies
+    const activePolicies = appData.policy_holders.filter(
+      policy => policy.status === 'Active'
+    ).length;
+    
+    // Total customers
+    const totalCustomers = appData.customers.length;
+    
+    // Total agents
+    const totalAgents = appData.sales_agents.length;
+    
+    // Total premium collected
+    const totalPremiumCollected = appData.premium_payments.reduce(
+      (total, payment) => total + parseFloat(payment.total_paid || '0'), 
+      0
+    );
+    
+    // Pending claims
+    const pendingClaims = appData.claim_requests.filter(
+      claim => claim.status === 'Pending'
+    ).length;
+    
+    // Average premium
+    const averagePremium = totalPolicies > 0 ? 
+      totalPremiumCollected / totalPolicies : 0;
+    
+    // Due payments (remaining premium)
+    const duePayments = appData.premium_payments.reduce(
+      (total, payment) => total + parseFloat(payment.remaining_premium || '0'), 
+      0
+    );
+    
+    // Loan statistics
+    const activeLoans = appData.loans.filter(loan => loan.loan_status === 'Active');
+    const totalLoanAmount = activeLoans.reduce(
+      (total, loan) => total + parseFloat(loan.loan_amount), 
+      0
+    );
+    
+    const totalRepayments = appData.loan_repayments.reduce(
+      (total, repayment) => total + parseFloat(repayment.amount), 
+      0
+    );
+    
+    const pendingLoans = appData.loans.filter(
+      loan => loan.loan_status === 'Pending'
+    ).length;
+    
+    return {
+      totalPolicies,
+      activePolicies,
+      totalCustomers,
+      totalAgents,
+      totalPremiumCollected,
+      pendingClaims,
+      averagePremium,
+      duePayments,
+      loanStats: {
+        totalActiveLoans: activeLoans.length,
+        totalLoanAmount,
+        totalRepayments,
+        pendingApprovals: pendingLoans
+      }
+    };
   };
+  
+  const stats = calculateDashboardStats();
 
   return (
     <DashboardLayout title="Dashboard">
@@ -41,29 +108,29 @@ const Dashboard = () => {
             <StatsCard
               icon={<FileText className="h-5 w-5" />}
               title="Total Policies"
-              value="2"
-              trend={{ value: "+5% from last month", positive: true }}
+              value={stats.totalPolicies.toString()}
+              trend={{ value: "Based on policy holders data", positive: true }}
             />
             
             <StatsCard
               icon={<Users className="h-5 w-5" />}
               title="Total Customers"
-              value="3"
-              trend={{ value: "+2% from last month", positive: true }}
+              value={stats.totalCustomers.toString()}
+              trend={{ value: "Registered customers", positive: true }}
             />
             
             <StatsCard
               icon={<User className="h-5 w-5" />}
               title="Total Agents"
-              value="1"
-              trend={{ value: "Same as last month", neutral: true }}
+              value={stats.totalAgents.toString()}
+              trend={{ value: "Active sales agents", neutral: true }}
             />
             
             <StatsCard
               icon={<CreditCard className="h-5 w-5" />}
               title="Total Premium Collected"
-              value="Rs. 231,250"
-              trend={{ value: "+15% from last month", positive: true }}
+              value={formatCurrency(stats.totalPremiumCollected)}
+              trend={{ value: "From all premium payments", positive: true }}
             />
           </div>
           
@@ -72,23 +139,23 @@ const Dashboard = () => {
             <StatsCard
               icon={<AlertTriangle className="h-5 w-5" />}
               title="Pending Claims"
-              value="1"
-              trend={{ value: "-5% from last month", positive: false }}
+              value={stats.pendingClaims.toString()}
+              trend={{ value: "Awaiting processing", positive: false }}
             />
             
             <StatsCard
               icon={<FileText className="h-5 w-5" />}
               title="Active Policies"
-              value="2"
-              trend={{ value: "+15% from last month", positive: true }}
+              value={stats.activePolicies.toString()}
+              trend={{ value: "Currently active policies", positive: true }}
             />
             
             <StatsCard
               icon={<CreditCard className="h-5 w-5" />}
               title={isSuperAdmin ? "Average Premium" : "Due Payments"}
-              value={isSuperAdmin ? "Rs. 9,250" : "Rs. 35,750"}
+              value={isSuperAdmin ? formatCurrency(stats.averagePremium) : formatCurrency(stats.duePayments)}
               trend={{ 
-                value: isSuperAdmin ? "+5% from last month" : "+8% from last month", 
+                value: isSuperAdmin ? "Per policy average" : "Remaining premium payments", 
                 positive: isSuperAdmin
               }}
             />

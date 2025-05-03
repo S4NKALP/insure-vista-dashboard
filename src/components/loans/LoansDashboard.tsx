@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,40 +17,118 @@ import { formatCurrency } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { AddLoanDialog } from './AddLoanDialog';
+import appData from '@/api/mock/data';
 
-const loanTypeData = [
-  { name: 'Policy Loans', value: 1250000 },
-  { name: 'Mortgage Loans', value: 850000 },
-  { name: 'Personal Loans', value: 500000 },
-];
-
-const loanStatusData = [
-  { name: 'Pending', value: 5 },
-  { name: 'Approved', value: 12 },
-  { name: 'Rejected', value: 3 },
-  { name: 'Completed', value: 9 },
-];
-
-const monthlyLoanData = [
-  { name: 'Jan', amount: 120000 },
-  { name: 'Feb', amount: 180000 },
-  { name: 'Mar', amount: 250000 },
-  { name: 'Apr', amount: 300000 },
-  { name: 'May', amount: 220000 },
-  { name: 'Jun', amount: 400000 },
-];
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+// Calculate loan statistics from mock data
+const calculateLoanStatistics = () => {
+  const { loans, loan_repayments } = appData;
+  
+  // Total active loans
+  const activeLoans = loans.filter(loan => loan.loan_status === 'Active');
+  const totalActiveLoansAmount = activeLoans.reduce((total, loan) => {
+    return total + parseFloat(loan.loan_amount);
+  }, 0);
+  
+  // Get current month and year
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+  
+  // Repayments this month
+  const repaymentsThisMonth = loan_repayments.filter(repayment => {
+    const repaymentDate = new Date(repayment.repayment_date);
+    return repaymentDate.getMonth() === currentMonth && 
+           repaymentDate.getFullYear() === currentYear;
+  });
+  
+  const totalRepaymentsThisMonth = repaymentsThisMonth.reduce((total, repayment) => {
+    return total + parseFloat(repayment.amount);
+  }, 0);
+  
+  // Pending loans
+  const pendingLoans = loans.filter(loan => loan.loan_status === 'Pending');
+  
+  // Generate monthly loan data (using the creation date)
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const monthlyLoanMap = new Map();
+  
+  // Initialize with all months
+  monthNames.forEach(month => {
+    monthlyLoanMap.set(month, 0);
+  });
+  
+  // Aggregate loan amounts by month
+  loans.forEach(loan => {
+    const creationDate = new Date(loan.created_at);
+    const monthName = monthNames[creationDate.getMonth()];
+    const currentAmount = monthlyLoanMap.get(monthName) || 0;
+    monthlyLoanMap.set(monthName, currentAmount + parseFloat(loan.loan_amount));
+  });
+  
+  const monthlyLoanData = Array.from(monthlyLoanMap).map(([name, amount]) => ({
+    name,
+    amount
+  }));
+  
+  // We don't have type data, but we'll generate some based on loan amount ranges
+  // This is just for visualization purposes since the actual data doesn't include types
+  const loanTypeData = [
+    { name: 'Policy Loans', value: totalActiveLoansAmount },
+    { name: 'Mortgage Loans', value: 0 },
+    { name: 'Personal Loans', value: 0 }
+  ];
+  
+  // Status distribution
+  const statusDistribution = new Map();
+  loans.forEach(loan => {
+    const status = loan.loan_status;
+    const count = statusDistribution.get(status) || 0;
+    statusDistribution.set(status, count + 1);
+  });
+  
+  // Ensure we have all statuses represented
+  ['Active', 'Pending', 'Completed', 'Rejected'].forEach(status => {
+    if (!statusDistribution.has(status)) {
+      statusDistribution.set(status, 0);
+    }
+  });
+  
+  const loanStatusData = Array.from(statusDistribution).map(([name, value]) => ({
+    name,
+    value
+  }));
+  
+  return {
+    totalActiveLoansAmount,
+    totalRepaymentsThisMonth,
+    pendingLoans: pendingLoans.length,
+    monthlyLoanData,
+    loanTypeData,
+    loanStatusData
+  };
+};
 
 export const LoansDashboard = () => {
   const { user } = useAuth();
   const isBranch = user?.role === 'branch';
   const [addLoanOpen, setAddLoanOpen] = React.useState(false);
+  
+  // Get loan statistics from mock data
+  const {
+    totalActiveLoansAmount,
+    totalRepaymentsThisMonth,
+    pendingLoans,
+    monthlyLoanData,
+    loanTypeData,
+    loanStatusData
+  } = calculateLoanStatistics();
+
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        
+        <h1 className="text-2xl font-bold">Loan Management</h1>
         {isBranch && (
           <Button onClick={() => setAddLoanOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
@@ -67,9 +144,9 @@ export const LoansDashboard = () => {
             <CardDescription>Current outstanding loans</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(2600000)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(totalActiveLoansAmount)}</div>
             <div className="text-xs text-muted-foreground">
-              +5% from last month
+              Based on {appData.loans.filter(l => l.loan_status === 'Active').length} active loans
             </div>
           </CardContent>
         </Card>
@@ -80,9 +157,9 @@ export const LoansDashboard = () => {
             <CardDescription>Total loan repayments</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(320000)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(totalRepaymentsThisMonth)}</div>
             <div className="text-xs text-muted-foreground">
-              +12% from last month
+              From {appData.loan_repayments.length} repayment entries
             </div>
           </CardContent>
         </Card>
@@ -93,9 +170,9 @@ export const LoansDashboard = () => {
             <CardDescription>Loans awaiting approval</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">5</div>
+            <div className="text-2xl font-bold">{pendingLoans}</div>
             <div className="text-xs text-muted-foreground">
-              -2 from last month
+              Out of {appData.loans.length} total loans
             </div>
           </CardContent>
         </Card>
@@ -138,7 +215,9 @@ export const LoansDashboard = () => {
                       fill="#8884d8"
                       dataKey="value"
                       nameKey="name"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      label={({ name, percent }) => 
+                        percent > 0 ? `${name} ${(percent * 100).toFixed(0)}%` : ''
+                      }
                     >
                       {loanTypeData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -162,7 +241,9 @@ export const LoansDashboard = () => {
                       fill="#8884d8"
                       dataKey="value"
                       nameKey="name"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      label={({ name, percent }) => 
+                        percent > 0 ? `${name} ${(percent * 100).toFixed(0)}%` : ''
+                      }
                     >
                       {loanStatusData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

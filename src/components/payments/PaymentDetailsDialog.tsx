@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Dialog,
@@ -47,6 +46,8 @@ export const PaymentDetailsDialog = ({
   type
 }: PaymentDetailsDialogProps) => {
   const { toast } = useToast();
+  
+  // Initialize form values
   const form = useForm({
     defaultValues: {
       paymentMethod: payment.paymentMethod || '',
@@ -56,11 +57,21 @@ export const PaymentDetailsDialog = ({
     }
   });
   
+  // Determine which properties to use for premium payments vs claim payments
+  const policyNumber = type === 'premium' ? payment.policy_holder_number : payment.policyNumber;
+  const customerName = type === 'premium' ? payment.customer_name : payment.customerName;
+  const status = type === 'premium' ? payment.payment_status : payment.status;
+  
+  // For premium payments, adapt the data structure to what the dialog needs
+  const amount = type === 'premium' 
+    ? (payment.annual_premium || payment.interval_payment || payment.total_paid || 0) 
+    : payment.amount;
+  
   const handleProcessPayment = (data: any) => {
     toast({
       title: "Payment processed",
       description: type === 'premium' 
-        ? `Premium payment for policy ${payment.policyNumber} has been recorded` 
+        ? `Premium payment for policy ${policyNumber} has been recorded` 
         : `Claim payment for claim ${payment.claimId} has been processed`,
     });
     onOpenChange(false);
@@ -75,66 +86,74 @@ export const PaymentDetailsDialog = ({
           </DialogTitle>
           <DialogDescription>
             {type === 'premium' 
-              ? `Policy: ${payment.policyNumber}`
-              : `Claim: ${payment.claimId} | Policy: ${payment.policyNumber}`}
+              ? `Policy: ${policyNumber}`
+              : `Claim: ${payment.claimId} | Policy: ${policyNumber}`}
           </DialogDescription>
         </DialogHeader>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
             <h3 className="text-sm font-medium text-muted-foreground">Policy Holder</h3>
-            <p className="text-base">{payment.customerName}</p>
-          </div>
-          
-          <div>
-            <h3 className="text-sm font-medium text-muted-foreground">Amount</h3>
-            <p className="text-base font-semibold">{formatCurrency(payment.amount)}</p>
+            <p className="text-base">{customerName}</p>
           </div>
           
           {type === 'premium' ? (
             <>
               <div>
-                <h3 className="text-sm font-medium text-muted-foreground">Due Date</h3>
-                <p className="text-base">{formatDate(payment.dueDate)}</p>
+                <h3 className="text-sm font-medium text-muted-foreground">Annual Premium</h3>
+                <p className="text-base font-semibold">{formatCurrency(payment.annual_premium)}</p>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground">Total Paid</h3>
+                <p className="text-base">{formatCurrency(payment.total_paid)}</p>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground">Remaining Premium</h3>
+                <p className="text-base">{formatCurrency(payment.remaining_premium)}</p>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground">Next Payment Date</h3>
+                <p className="text-base">{formatDate(payment.next_payment_date)}</p>
               </div>
               
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground">Status</h3>
                 <Badge 
                   variant={
-                    payment.status === 'Paid' ? "outline" : 
-                    payment.status === 'Pending' ? "default" : 
-                    "secondary"
+                    status === 'Paid' ? "outline" : 
+                    status === 'Partially Paid' ? "secondary" : 
+                    "default"
                   }
-                  className={payment.status === 'Paid' ? "bg-green-100 text-green-800 hover:bg-green-200" : ""}
+                  className={status === 'Paid' ? "bg-green-100 text-green-800 hover:bg-green-200" : ""}
                 >
-                  {payment.status}
+                  {status}
                 </Badge>
               </div>
               
-              {payment.paidDate && (
+              {payment.fine_due && parseFloat(payment.fine_due) > 0 && (
                 <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">Paid Date</h3>
-                  <p className="text-base">{formatDate(payment.paidDate)}</p>
+                  <h3 className="text-sm font-medium text-muted-foreground">Fine Due</h3>
+                  <p className="text-base">{formatCurrency(payment.fine_due)}</p>
                 </div>
               )}
               
-              {payment.paymentMethod && (
+              {payment.gsv_value && parseFloat(payment.gsv_value) > 0 && (
                 <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">Payment Method</h3>
-                  <p className="text-base">{payment.paymentMethod}</p>
-                </div>
-              )}
-              
-              {payment.receiptNumber && (
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">Receipt Number</h3>
-                  <p className="text-base">{payment.receiptNumber}</p>
+                  <h3 className="text-sm font-medium text-muted-foreground">GSV Value</h3>
+                  <p className="text-base">{formatCurrency(payment.gsv_value)}</p>
                 </div>
               )}
             </>
           ) : (
             <>
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground">Amount</h3>
+                <p className="text-base font-semibold">{formatCurrency(amount)}</p>
+              </div>
+            
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground">Beneficiary</h3>
                 <p className="text-base">{payment.beneficiary}</p>
@@ -144,13 +163,13 @@ export const PaymentDetailsDialog = ({
                 <h3 className="text-sm font-medium text-muted-foreground">Status</h3>
                 <Badge 
                   variant={
-                    payment.status === 'Processed' ? "outline" : 
-                    payment.status === 'Pending' ? "default" : 
+                    status === 'Processed' ? "outline" : 
+                    status === 'Pending' ? "default" : 
                     "secondary"
                   }
-                  className={payment.status === 'Processed' ? "bg-green-100 text-green-800 hover:bg-green-200" : ""}
+                  className={status === 'Processed' ? "bg-green-100 text-green-800 hover:bg-green-200" : ""}
                 >
-                  {payment.status}
+                  {status}
                 </Badge>
               </div>
               
@@ -188,7 +207,7 @@ export const PaymentDetailsDialog = ({
           )}
         </div>
         
-        {canEdit && payment.status === (type === 'premium' ? 'Pending' : 'Pending') && (
+        {canEdit && (type === 'premium' ? status !== 'Paid' : status === 'Pending') && (
           <>
             <Separator className="my-4" />
             
@@ -264,9 +283,7 @@ export const PaymentDetailsDialog = ({
                 </div>
                 
                 <DialogFooter>
-                  <Button type="submit">
-                    {type === 'premium' ? 'Record Payment' : 'Process Payment'}
-                  </Button>
+                  <Button type="submit">Process Payment</Button>
                   <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                     Cancel
                   </Button>
@@ -274,12 +291,6 @@ export const PaymentDetailsDialog = ({
               </form>
             </Form>
           </>
-        )}
-        
-        {(!canEdit || payment.status !== (type === 'premium' ? 'Pending' : 'Pending')) && (
-          <DialogFooter>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
-          </DialogFooter>
         )}
       </DialogContent>
     </Dialog>

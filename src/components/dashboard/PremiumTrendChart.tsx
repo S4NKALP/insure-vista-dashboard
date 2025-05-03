@@ -1,23 +1,39 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import appData from '@/api/mock/data';
+import { formatCurrency } from '@/lib/utils';
 
-// Sample data for the premium trend
-const data = [
-  { name: 'Jan', amount: 49000 },
-  { name: 'Feb', amount: 60000 },
-  { name: 'Mar', amount: 45000 },
-  { name: 'Apr', amount: 68000 },
-  { name: 'May', amount: 63000 },
-  { name: 'Jun', amount: 75000 },
-  { name: 'Jul', amount: 68000 },
-  { name: 'Aug', amount: 80000 },
-  { name: 'Sep', amount: 85000 },
-  { name: 'Oct', amount: 92000 },
-  { name: 'Nov', amount: 97000 },
-  { name: 'Dec', amount: 105000 },
-];
+// Generate premium trend data from actual premium payments
+const generatePremiumTrendData = () => {
+  const { premium_payments } = appData;
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  
+  // Initialize monthly data with zeros
+  const monthlyData = new Map();
+  monthNames.forEach(month => {
+    monthlyData.set(month, 0);
+  });
+  
+  // Aggregate premium amounts by month
+  premium_payments.forEach(payment => {
+    // Use the next_payment_date as a proxy since we don't have payment history
+    if (payment.next_payment_date) {
+      const paymentDate = new Date(payment.next_payment_date);
+      const monthName = monthNames[paymentDate.getMonth()];
+      const currentAmount = monthlyData.get(monthName) || 0;
+      monthlyData.set(monthName, currentAmount + parseFloat(payment.total_paid || '0'));
+    }
+  });
+  
+  // Convert map to array format for the chart
+  return monthNames.map(month => ({
+    name: month,
+    amount: monthlyData.get(month)
+  }));
+};
+
+const data = generatePremiumTrendData();
 
 export const PremiumTrendChart = () => {
   return (
@@ -35,7 +51,7 @@ export const PremiumTrendChart = () => {
                 width={40}
               />
               <Tooltip 
-                formatter={(value: number) => [`Rs. ${value.toLocaleString()}`, 'Amount']}
+                formatter={(value: number) => [formatCurrency(value), 'Amount']}
                 labelFormatter={(label) => `${label}`}
               />
               <Bar dataKey="amount" fill="#8a5cf6" radius={[4, 4, 0, 0]} />

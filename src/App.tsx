@@ -21,7 +21,7 @@ import ClaimManagement from "./pages/ClaimManagement";
 import PaymentManagement from "./pages/PaymentManagement";
 import LoanManagement from "./pages/LoanManagement";
 import Settings from "./pages/Settings";
-import PremiumPaymentsManagement from "./pages/PremiumPaymentsManagement";
+
 import SalesAgentManagement from "./pages/SalesAgentManagement";
 
 const queryClient = new QueryClient();
@@ -59,7 +59,6 @@ const App = () => (
               {/* Claims and Payments Routes */}
               <Route path="/claims" element={<PrivateRoute><ClaimManagement /></PrivateRoute>} />
               <Route path="/payments" element={<PrivateRoute><PaymentManagement /></PrivateRoute>} />
-              <Route path="/premium-payments" element={<PrivateRoute><PremiumPaymentsManagement /></PrivateRoute>} />
               
               {/* Policy Management Routes */}
               <Route path="/policies" element={<PrivateRoute><PolicyManagement /></PrivateRoute>} />
