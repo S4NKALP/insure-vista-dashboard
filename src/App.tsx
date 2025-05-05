@@ -52,25 +52,25 @@ const App = () => (
               
               {/* Superadmin Routes */}
               <Route path="/users" element={<PrivateRoute allowedRoles={['superadmin', 'branch']}><UserManagement /></PrivateRoute>} />
-              {/* <Route path="/branches" element={<PrivateRoute allowedRoles={['superadmin']}><BranchManagement /></PrivateRoute>} />
+              <Route path="/branches" element={<PrivateRoute allowedRoles={['superadmin']}><BranchManagement /></PrivateRoute>} />
               <Route path="/settings" element={<PrivateRoute allowedRoles={['superadmin']}><Settings /></PrivateRoute>} />
-              <Route path="/agents" element={<PrivateRoute allowedRoles={['superadmin', 'branch']}><SalesAgentManagement /></PrivateRoute>} /> */}
+              <Route path="/agents" element={<PrivateRoute allowedRoles={['superadmin', 'branch']}><SalesAgentManagement /></PrivateRoute>} />
               
               {/* Claims and Payments Routes */}
-              {/* <Route path="/claims" element={<PrivateRoute><ClaimManagement /></PrivateRoute>} />
+              <Route path="/claims" element={<PrivateRoute><ClaimManagement /></PrivateRoute>} />
               <Route path="/payments" element={<PrivateRoute><PaymentManagement /></PrivateRoute>} />
-               */}
+              
               {/* Policy Management Routes */}
-              {/* <Route path="/policies" element={<PrivateRoute><PolicyManagement /></PrivateRoute>} />
-              <Route path="/policy-holders" element={<PrivateRoute allowedRoles={['superadmin', 'branch']}><PolicyHolderManagement /></PrivateRoute>} /> */}
+              <Route path="/policies" element={<PrivateRoute><PolicyManagement /></PrivateRoute>} />
+              <Route path="/policy-holders" element={<PrivateRoute allowedRoles={['superadmin', 'branch']}><PolicyHolderManagement /></PrivateRoute>} />
               
               {/* Shared Routes */}
-              {/* <Route path="/reports" element={<PrivateRoute><Reports /></PrivateRoute>} />
-               */}
+              <Route path="/reports" element={<PrivateRoute><Reports /></PrivateRoute>} />
+              
               {/* Branch Admin Routes */}
-              {/* <Route path="/customers" element={<PrivateRoute allowedRoles={['superadmin', 'branch']}><UserManagement /></PrivateRoute>} />
+              <Route path="/customers" element={<PrivateRoute allowedRoles={['superadmin', 'branch']}><UserManagement /></PrivateRoute>} />
               <Route path="/loans" element={<PrivateRoute><LoanManagement /></PrivateRoute>} />
-               */}
+              
               {/* Error Pages */}
               <Route path="/unauthorized" element={<Unauthorized />} />
               <Route path="*" element={<NotFound />} />

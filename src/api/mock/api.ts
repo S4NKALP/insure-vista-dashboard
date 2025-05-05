@@ -611,7 +611,7 @@ export const updateUser = async (userId: number, userData: UpdateUserData): Prom
 };
 
 /**
- * Deletes a user.
+
  * DELETE /api/users/{id}/
  */
 export const deleteUser = async (userId: number): Promise<ApiResponse<boolean>> => {
