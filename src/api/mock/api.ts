@@ -522,16 +522,48 @@ export const getLoanRepayments = async (): Promise<ApiResponse<any[]>> => {
 
 // ======== DASHBOARD STATISTICS API ========
 export const getDashboardStats = async (): Promise<ApiResponse<any>> => {
+  // Using the improved apiRequest with better error handling
+  const response = await apiRequest<any>('/home/', {
+    credentials: 'include',
+  });
+  
+  // Log the response for debugging
+  console.log('Dashboard API raw response:', response);
+  
+  // If we got data back but it's not in the expected format, 
+  // transform it to match our expected structure
+  if (response.success && response.data) {
+    // Some backend APIs might return the data in a different structure
+    // This handles potential format differences
+    const data = response.data;
     
-    // Add withCredentials to ensure cookies are sent
-    return apiRequest<any>(`/home/`, {
-      headers: {
-        // Force specific auth format for this endpoint
-        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-      },
-      credentials: 'include', // Include cookies in the request
-    });
-  };
+    // Example data transformation if needed - adjust according to your API response
+    if (Array.isArray(data) || (typeof data === 'object' && !data.totalPolicies)) {
+      // Handle case where data is in unexpected format
+      // For example, if data is returned as separate collections like your JSON example
+      const transformedData = {
+        totalPolicies: data.policy_holders?.length || 0,
+        activePolicies: data.policy_holders?.filter(p => p.status === 'Active')?.length || 0,
+        totalCustomers: data.customers?.length || 0,
+        totalAgents: data.sales_agents?.length || 0,
+        totalPremium: data.premium_payments?.reduce((sum, payment) => sum + parseFloat(payment.total_paid || '0'), 0) || 0,
+        pendingClaims: data.claim_requests?.filter(claim => claim.status === 'Pending')?.length || 0,
+        duePayments: data.premium_payments?.reduce((sum, payment) => sum + parseFloat(payment.remaining_premium || '0'), 0) || 0,
+        activeLoans: data.loans?.filter(loan => loan.loan_status === 'Active')?.length || 0,
+        totalLoanAmount: data.loans?.reduce((sum, loan) => sum + parseFloat(loan.loan_amount || '0'), 0) || 0,
+        totalRepayments: data.loan_repayments?.reduce((sum, repayment) => sum + parseFloat(repayment.amount || '0'), 0) || 0,
+        pendingLoans: data.loans?.filter(loan => loan.loan_status === 'Pending')?.length || 0
+      };
+      
+      return {
+        ...response,
+        data: transformedData
+      };
+    }
+  }
+  
+  return response;
+};
 
 // ======== UNDERWRITING API ========
 export const getUnderwritingData = async (): Promise<ApiResponse<any[]>> => {
@@ -550,7 +582,7 @@ type UpdateUserData = Partial<Omit<User, 'id' | 'created_at' | 'updated_at' | 'l
  * GET /api/users/
  */
 export const getUsers = async (): Promise<ApiResponse<User[]>> => {
-    console.log("Fetching all users");
+   
     return await apiRequest<User[]>(`/users/`);
 };
 

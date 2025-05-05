@@ -39,12 +39,19 @@ const defaultStats = {
 // Function to fetch and process dashboard data
 const fetchDashboardData = async () => {
   console.log('Fetching dashboard data...');
-  const response = await getDashboardStats();
-  console.log('Dashboard API response:', response);
-  
-  if (response.success && response.data) {
-    const data = response.data;
-    // Process and return structured stats
+  try {
+    const response = await getDashboardStats();
+    console.log('Dashboard API response:', response);
+    
+    // First check if response exists and has success property
+    if (!response || response.success === false) {
+      throw new Error(response?.message || 'Failed to fetch dashboard data');
+    }
+    
+    // Once we know response is successful, extract and process data
+    const data = response.data || {};
+    
+    // Process and return structured stats with fallbacks for missing values
     return {
       totalPolicies: data.totalPolicies || 0,
       activePolicies: data.activePolicies || 0,
@@ -61,8 +68,9 @@ const fetchDashboardData = async () => {
         pendingApprovals: data.pendingLoans || 0
       }
     };
-  } else {
-    throw new Error(response.message || 'Failed to fetch dashboard data');
+  } catch (error) {
+    console.error('Error fetching dashboard data:', error);
+    throw error; // Re-throw to let React Query handle it
   }
 };
 
@@ -81,6 +89,11 @@ const Dashboard = () => {
     staleTime: 5 * 60 * 1000, // Cache data for 5 minutes
     retry: 1 // Retry once on failure
   });
+
+  // Add debug output to help troubleshoot
+  console.log('Current stats:', stats);
+  console.log('Is loading:', isLoading);
+  console.log('Is error:', isError);
 
   return (
     <DashboardLayout title="Dashboard">

@@ -62,7 +62,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 const fetchBranches = async (): Promise<Branch[]> => {
   const response = await getBranches();
   if (response.success) {
-    return response.data || [];
+    return Array.isArray(response.data) ? response.data : [];
   } else {
     throw new Error(response.message || 'Failed to fetch branches');
   }
