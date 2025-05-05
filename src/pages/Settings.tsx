@@ -11,7 +11,7 @@ import { NotificationSettings } from '@/components/settings/NotificationSettings
 
 const Settings = () => {
   const { user } = useAuth();
-  const isSuperAdmin = user?.role === 'superadmin';
+  const issuperadmin = user?.role === 'superadmin';
   
   return (
     <DashboardLayout title="Settings">
@@ -30,13 +30,12 @@ const Settings = () => {
             <TabsTrigger value="user">User Preferences</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="company">
-            <CompanySettings isSuperAdmin={isSuperAdmin} />
+            <CompanySettings issuperadmin={issuperadmin} />  
           </TabsContent>
-          
           <TabsContent value="system">
-            <SystemSettings isSuperAdmin={isSuperAdmin} />
+            <SystemSettings issuperadmin={issuperadmin} />
           </TabsContent>
           
           <TabsContent value="user">

@@ -20,7 +20,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface SystemSettingsProps {
-  isSuperAdmin: boolean;
+  issuperadmin: boolean;
 }
 
 const formSchema = z.object({
@@ -33,7 +33,7 @@ const formSchema = z.object({
   dataBackupFrequency: z.string(),
 });
 
-export const SystemSettings: React.FC<SystemSettingsProps> = ({ isSuperAdmin }) => {
+export const SystemSettings: React.FC<SystemSettingsProps> = ({ issuperadmin }) => {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -72,7 +72,7 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({ isSuperAdmin }) 
                   <FormItem>
                     <FormLabel>Default Interest Rate (%)</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.1" {...field} disabled={!isSuperAdmin} />
+                      <Input type="number" step="0.1" {...field} disabled={!issuperadmin} />
                     </FormControl>
                     <FormDescription>
                       Default interest rate for new loans
@@ -89,7 +89,7 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({ isSuperAdmin }) 
                   <FormItem>
                     <FormLabel>Max Loan Percentage (%)</FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} disabled={!isSuperAdmin} />
+                      <Input type="number" {...field} disabled={!issuperadmin} />
                     </FormControl>
                     <FormDescription>
                       Maximum percentage of policy value that can be loaned
@@ -108,7 +108,7 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({ isSuperAdmin }) 
                     <Select 
                       onValueChange={field.onChange} 
                       defaultValue={field.value}
-                      disabled={!isSuperAdmin}
+                      disabled={!issuperadmin}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -138,7 +138,7 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({ isSuperAdmin }) 
                     <Select 
                       onValueChange={field.onChange} 
                       defaultValue={field.value}
-                      disabled={!isSuperAdmin}
+                      disabled={!issuperadmin}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -176,7 +176,7 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({ isSuperAdmin }) 
                       <Switch
                         checked={field.value}
                         onCheckedChange={field.onChange}
-                        disabled={!isSuperAdmin}
+                        disabled={!issuperadmin}
                       />
                     </FormControl>
                   </FormItem>
@@ -198,7 +198,7 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({ isSuperAdmin }) 
                       <Switch
                         checked={field.value}
                         onCheckedChange={field.onChange}
-                        disabled={!isSuperAdmin}
+                        disabled={!issuperadmin}
                       />
                     </FormControl>
                   </FormItem>
@@ -220,7 +220,7 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({ isSuperAdmin }) 
                       <Switch
                         checked={field.value}
                         onCheckedChange={field.onChange}
-                        disabled={!isSuperAdmin}
+                        disabled={!issuperadmin}
                       />
                     </FormControl>
                   </FormItem>
@@ -228,7 +228,7 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({ isSuperAdmin }) 
               />
             </div>
             
-            {isSuperAdmin && (
+            {issuperadmin && (
               <div className="flex justify-end">
                 <Button type="submit">Save Settings</Button>
               </div>

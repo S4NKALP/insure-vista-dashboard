@@ -1,4 +1,5 @@
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import DashboardLayout from '@/components/DashboardLayout';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { PremiumTrendChart } from '@/components/dashboard/PremiumTrendChart';
@@ -12,86 +13,74 @@ import { usePermissions } from '@/contexts/PermissionsContext';
 import PermissionGate from '@/components/PermissionGate';
 import { LoansDashboard } from '@/components/loans/LoansDashboard';
 import { formatCurrency } from '@/lib/utils';
-import appData from '@/api/mock/data';
+import { getDashboardStats } from '@/api/endpoints'; // Use endpoint export
 
-import { FileText, Users, User, CreditCard, AlertTriangle } from 'lucide-react';
+import { FileText, Users, User, CreditCard, AlertTriangle, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+
+// Default stats structure
+const defaultStats = {
+  totalPolicies: 0,
+  activePolicies: 0,
+  totalCustomers: 0,
+  totalAgents: 0,
+  totalPremiumCollected: 0,
+  pendingClaims: 0,
+  averagePremium: 0,
+  duePayments: 0,
+  loanStats: {
+    totalActiveLoans: 0,
+    totalLoanAmount: 0,
+    totalRepayments: 0,
+    pendingApprovals: 0
+  }
+};
+
+// Function to fetch and process dashboard data
+const fetchDashboardData = async () => {
+  console.log('Fetching dashboard data...');
+  const response = await getDashboardStats();
+  console.log('Dashboard API response:', response);
+  
+  if (response.success && response.data) {
+    const data = response.data;
+    // Process and return structured stats
+    return {
+      totalPolicies: data.totalPolicies || 0,
+      activePolicies: data.activePolicies || 0,
+      totalCustomers: data.totalCustomers || 0,
+      totalAgents: data.totalAgents || 0,
+      totalPremiumCollected: data.totalPremium || 0,
+      pendingClaims: data.pendingClaims || 0,
+      averagePremium: data.totalPolicies > 0 ? data.totalPremium / data.totalPolicies : 0,
+      duePayments: data.duePayments || 0,
+      loanStats: {
+        totalActiveLoans: data.activeLoans || 0,
+        totalLoanAmount: data.totalLoanAmount || 0,
+        totalRepayments: data.totalRepayments || 0,
+        pendingApprovals: data.pendingLoans || 0
+      }
+    };
+  } else {
+    throw new Error(response.message || 'Failed to fetch dashboard data');
+  }
+};
 
 const Dashboard = () => {
   const { user } = useAuth();
   const { isSuperAdmin, isBranchAdmin } = usePermissions();
   
-  // Calculate dashboard statistics from actual data
-  const calculateDashboardStats = () => {
-    // Total policies
-    const totalPolicies = appData.policy_holders.length;
-    
-    // Active policies
-    const activePolicies = appData.policy_holders.filter(
-      policy => policy.status === 'Active'
-    ).length;
-    
-    // Total customers
-    const totalCustomers = appData.customers.length;
-    
-    // Total agents
-    const totalAgents = appData.sales_agents.length;
-    
-    // Total premium collected
-    const totalPremiumCollected = appData.premium_payments.reduce(
-      (total, payment) => total + parseFloat(payment.total_paid || '0'), 
-      0
-    );
-    
-    // Pending claims
-    const pendingClaims = appData.claim_requests.filter(
-      claim => claim.status === 'Pending'
-    ).length;
-    
-    // Average premium
-    const averagePremium = totalPolicies > 0 ? 
-      totalPremiumCollected / totalPolicies : 0;
-    
-    // Due payments (remaining premium)
-    const duePayments = appData.premium_payments.reduce(
-      (total, payment) => total + parseFloat(payment.remaining_premium || '0'), 
-      0
-    );
-    
-    // Loan statistics
-    const activeLoans = appData.loans.filter(loan => loan.loan_status === 'Active');
-    const totalLoanAmount = activeLoans.reduce(
-      (total, loan) => total + parseFloat(loan.loan_amount), 
-      0
-    );
-    
-    const totalRepayments = appData.loan_repayments.reduce(
-      (total, repayment) => total + parseFloat(repayment.amount), 
-      0
-    );
-    
-    const pendingLoans = appData.loans.filter(
-      loan => loan.loan_status === 'Pending'
-    ).length;
-    
-    return {
-      totalPolicies,
-      activePolicies,
-      totalCustomers,
-      totalAgents,
-      totalPremiumCollected,
-      pendingClaims,
-      averagePremium,
-      duePayments,
-      loanStats: {
-        totalActiveLoans: activeLoans.length,
-        totalLoanAmount,
-        totalRepayments,
-        pendingApprovals: pendingLoans
-      }
-    };
-  };
-  
-  const stats = calculateDashboardStats();
+  const { 
+    data: stats = defaultStats, // Provide default stats while loading or on error
+    isLoading, 
+    isError, 
+    error 
+  } = useQuery({
+    queryKey: ['dashboardStats'],
+    queryFn: fetchDashboardData,
+    staleTime: 5 * 60 * 1000, // Cache data for 5 minutes
+    retry: 1 // Retry once on failure
+  });
 
   return (
     <DashboardLayout title="Dashboard">
@@ -102,6 +91,17 @@ const Dashboard = () => {
             {isBranchAdmin ? `Welcome to ${user?.branchName || 'your branch'} dashboard` : 'Welcome to your insurance dashboard'}
           </p>
         </div>
+        
+        {isError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error Loading Dashboard Stats</AlertTitle>
+            <AlertDescription>
+              {error instanceof Error ? error.message : 'An unexpected error occurred.'} Please try refreshing the page.
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <div className="grid gap-6">
           {/* Stats Overview */}
           <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -110,6 +110,7 @@ const Dashboard = () => {
               title="Total Policies"
               value={stats.totalPolicies.toString()}
               trend={{ value: "Based on policy holders data", positive: true }}
+              isLoading={isLoading}
             />
             
             <StatsCard
@@ -117,6 +118,7 @@ const Dashboard = () => {
               title="Total Customers"
               value={stats.totalCustomers.toString()}
               trend={{ value: "Registered customers", positive: true }}
+              isLoading={isLoading}
             />
             
             <StatsCard
@@ -124,6 +126,7 @@ const Dashboard = () => {
               title="Total Agents"
               value={stats.totalAgents.toString()}
               trend={{ value: "Active sales agents", neutral: true }}
+              isLoading={isLoading}
             />
             
             <StatsCard
@@ -131,16 +134,18 @@ const Dashboard = () => {
               title="Total Premium Collected"
               value={formatCurrency(stats.totalPremiumCollected)}
               trend={{ value: "From all premium payments", positive: true }}
+              isLoading={isLoading}
             />
           </div>
           
-          {/* Additional stats for superadmin or branch manager */}
+          {/* Additional stats */}
           <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
             <StatsCard
               icon={<AlertTriangle className="h-5 w-5" />}
               title="Pending Claims"
               value={stats.pendingClaims.toString()}
               trend={{ value: "Awaiting processing", positive: false }}
+              isLoading={isLoading}
             />
             
             <StatsCard
@@ -148,6 +153,7 @@ const Dashboard = () => {
               title="Active Policies"
               value={stats.activePolicies.toString()}
               trend={{ value: "Currently active policies", positive: true }}
+              isLoading={isLoading}
             />
             
             <StatsCard
@@ -158,10 +164,11 @@ const Dashboard = () => {
                 value: isSuperAdmin ? "Per policy average" : "Remaining premium payments", 
                 positive: isSuperAdmin
               }}
+              isLoading={isLoading}
             />
           </div>
           
-          {/* Charts */}
+          {/* Charts - These components might need internal loading/error handling too */}
           <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
             <PremiumTrendChart />
             <PolicyDistributionChart />
@@ -172,11 +179,12 @@ const Dashboard = () => {
             <RiskCategoryChart />
           </div>
           
-          {/* Tables */}
+          {/* Tables - These components will also need error/loading handling */}
           <RecentPoliciesTable />
           <RecentClaimsTable />
         </div>
         
+        {/* Loan Overview - Assuming LoansDashboard handles its own loading/errors */}
         <PermissionGate permission="view_loans">
           <div className="space-y-4">
             <h3 className="text-xl font-semibold">Loan Overview</h3>

@@ -1,10 +1,8 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shield } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -15,25 +13,54 @@ interface LocationState {
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const { login, demoLogin, isLoading } = useAuth();
+  const { login, isLoading, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as LocationState;
   
-  const from = state?.from || '/dashboard';
+  // Always use the dashboard path for redirection
+  const dashboardPath = '/dashboard';
+  
+  // Check if already authenticated and redirect
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      console.log('User already authenticated, redirecting to dashboard');
+      // Use hard navigation instead of React Router to ensure a clean state
+      window.location.href = dashboardPath;
+    }
+  }, [isAuthenticated, user]);
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = await login(username, password);
-    if (success) {
-      navigate(from, { replace: true });
+    
+    if (!username.trim() || !password.trim()) {
+      return;
     }
-  };
-  
-  const handleDemoLogin = async (role: 'superadmin' | 'branch') => {
-    const success = await demoLogin(role);
-    if (success) {
-      navigate(from, { replace: true });
+    
+    console.log(`Attempting to login with: ${username}`);
+    try {
+      const success = await login(username, password);
+      console.log('Login result:', success);
+      
+      if (success) {
+        console.log('Login successful, navigating to dashboard');
+        
+        // Check if token is stored properly
+        const token = localStorage.getItem('auth_token');
+        if (!token) {
+          console.error('No auth token found after login!');
+        } else {
+          console.log('Token found, length:', token.length);
+        }
+        
+        // Use a slight delay before navigation to allow state to update
+        setTimeout(() => {
+          // Force a hard navigation to dashboard to ensure a complete refresh
+          window.location.href = dashboardPath;
+        }, 300);
+      }
+    } catch (error) {
+      console.error('Login error:', error);
     }
   };
   
@@ -87,28 +114,6 @@ const Login = () => {
               </Button>
             </form>
           </CardContent>
-          <Separator className="my-4" />
-          <CardFooter className="flex flex-col gap-4">
-            <p className="text-sm text-center text-gray-500">Demo Accounts</p>
-            <div className="grid grid-cols-1 gap-3 w-full">
-              <Button 
-                onClick={() => handleDemoLogin('superadmin')} 
-                variant="outline" 
-                className="w-full"
-                disabled={isLoading}
-              >
-                Login as Super Admin (admin)
-              </Button>
-              <Button 
-                onClick={() => handleDemoLogin('branch')} 
-                variant="outline" 
-                className="w-full"
-                disabled={isLoading}
-              >
-                Login as Branch Manager (kohalpurBranch)
-              </Button>
-            </div>
-          </CardFooter>
         </Card>
       </div>
     </div>

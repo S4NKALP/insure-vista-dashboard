@@ -16,7 +16,7 @@ const Reports = () => {
   const isSuperAdmin = user?.role === 'superadmin';
   const [selectedTimeRange, setSelectedTimeRange] = useState<TimeRange>('monthly');
   const [selectedBranchId, setSelectedBranchId] = useState<number | null>(
-    !isSuperAdmin && user?.branchId ? parseInt(user.branchId) : null
+    !isSuperAdmin && user?.branch ? user.branch : null
   );
 
   return (
@@ -47,7 +47,7 @@ const Reports = () => {
           <TabsContent value="branch" className="mt-6">
             <BranchPerformanceReport 
               timeRange={selectedTimeRange} 
-              branchId={selectedBranchId || (user?.branchId ? parseInt(user.branchId) : 1)}
+              branchId={selectedBranchId || (user?.branch ? user.branch : 1)}
             />
           </TabsContent>
         </Tabs>

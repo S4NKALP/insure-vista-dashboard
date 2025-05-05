@@ -151,26 +151,26 @@ export interface SalesAgent {
   };
 }
 
+// Define Agent Application Type (Matching data.json structure)
 export interface AgentApplication {
   id: number;
-  branch_name: string;
-  first_name: string;
+  branch_name?: string | null; // Joined from backend
+  first_name: string; 
   last_name: string;
   father_name: string;
   mother_name: string;
   grand_father_name?: string | null;
   grand_mother_name?: string | null;
-  date_of_birth: string;
-  gender: string;
+  date_of_birth: string; // YYYY-MM-DD format
+  gender: 'M' | 'F' | 'O'; // Male, Female, Other
   email: string;
   phone_number: string;
   address: string;
-  resume?: string | null;
-  citizenship_front?: string | null;
-  citizenship_back?: string | null;
-  license_front?: string | null;
-  license_back?: string | null;
-  pp_photo?: string | null;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'Approved' | 'Rejected' | 'Pending'; // Backend controlled
+  created_at: string; // ISO string date for application date
+  updated_at?: string; // ISO string date for last update
+  rejection_reason?: string | null; // Optional reason for rejection
+  branch: number | null; // ID of the branch applied to
   license_number?: string | null;
   license_issue_date?: string | null;
   license_expiry_date?: string | null;
@@ -179,9 +179,18 @@ export interface AgentApplication {
   license_issue_zone?: string | null;
   license_issue_province?: string | null;
   license_issue_country?: string | null;
-  status: string;
-  created_at: string;
-  branch: number;
+  documents?: {
+    resume?: string | null;
+    citizenship?: {
+      front?: string | null;
+      back?: string | null;
+    };
+    license?: {
+      front?: string | null;
+      back?: string | null;
+    };
+    photo?: string | null;
+  };
 }
 
 export interface AgentReport {

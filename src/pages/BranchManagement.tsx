@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
@@ -6,7 +7,6 @@ import PermissionGate from '@/components/PermissionGate';
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
@@ -37,336 +37,300 @@ import {
   Phone,
   Mail,
   FileCheck,
-  DollarSign
+  DollarSign,
+  AlertCircle,
+  Trash2
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatCurrency, formatDate } from '@/lib/utils';
-import { Branch, ApiResponse } from '@/types';
+import { formatCurrency } from '@/lib/utils';
+import { Branch, ApiResponse, SalesAgent, AgentReport, PolicyHolder } from '@/types';
 import { 
   getBranches, 
-  getBranchById, 
   addBranch, 
+  updateBranch,
+  deleteBranch,
   getAgentsByBranch, 
   getPolicyHoldersByBranch,
   getAgentReportsByBranch
 } from '@/api/endpoints';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-// Extended branch type for UI purposes with calculated stats
-interface ExtendedBranch extends Branch {
-  total_policies: number;
-  total_premium: string;
-  total_claims: number;
-  total_agents: number;
-  status: string;
-}
+// --- API Fetching Functions ---
+
+const fetchBranches = async (): Promise<Branch[]> => {
+  const response = await getBranches();
+  if (response.success) {
+    return response.data || [];
+  } else {
+    throw new Error(response.message || 'Failed to fetch branches');
+  }
+};
+
+const fetchAgentsForBranch = async (branchId: number | null): Promise<SalesAgent[]> => {
+  if (!branchId) return [];
+  const response = await getAgentsByBranch(branchId);
+  if (response.success) {
+    return response.data || [];
+  } else {
+    throw new Error(response.message || 'Failed to fetch agents');
+  }
+};
+
+const fetchPolicyHoldersForBranch = async (branchId: number | null): Promise<PolicyHolder[]> => {
+  if (!branchId) return [];
+  const response = await getPolicyHoldersByBranch(branchId);
+  if (response.success) {
+    return response.data || [];
+  } else {
+    throw new Error(response.message || 'Failed to fetch policy holders');
+  }
+};
+
+const fetchAgentReportsForBranch = async (branchId: number | null): Promise<AgentReport[]> => {
+  if (!branchId) return [];
+  const response = await getAgentReportsByBranch(branchId);
+  if (response.success) {
+    return response.data || [];
+  } else {
+    throw new Error(response.message || 'Failed to fetch agent reports');
+  }
+};
+
+// --- Component ---
 
 const BranchManagement = () => {
   const { user } = useAuth();
   const { isSuperAdmin, userBranchId } = usePermissions();
-  const [branches, setBranches] = useState<ExtendedBranch[]>([]);
-  const [filteredBranches, setFilteredBranches] = useState<ExtendedBranch[]>([]);
+  const queryClient = useQueryClient();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddBranchOpen, setIsAddBranchOpen] = useState(false);
   const [isViewBranchOpen, setIsViewBranchOpen] = useState(false);
-  const [selectedBranch, setSelectedBranch] = useState<ExtendedBranch | null>(null);
-  const [newBranch, setNewBranch] = useState({
+  const [isEditBranchOpen, setIsEditBranchOpen] = useState(false); 
+  const [isDeleteBranchOpen, setIsDeleteBranchOpen] = useState(false);
+  const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
+  const [branchFormData, setBranchFormData] = useState<Omit<Branch, 'id' | 'user_details'>>({
     name: '',
-    branch_code: '',
+    branch_code: 0,
     location: '',
-    company: 1 // Default to the first company
+    company: 1, // Default company ID
+    company_name: 'Easy Life Insurance LTD.', // Default or fetch dynamically
+    user: null, // Manager ID
   });
-  const [isLoading, setIsLoading] = useState(true);
-  const [branchStats, setBranchStats] = useState<{
-    [key: number]: { 
-      customerCount: number; 
-      policyCount: number; 
-      agentCount: number; 
-      totalPremium: number;
-    }
-  }>({});
+  
+  // --- Data Queries ---
+  const { 
+    data: branches = [], 
+    isLoading: isLoadingBranches, 
+    isError: isErrorBranches, 
+    error: errorBranches 
+  } = useQuery<Branch[], Error>({
+    queryKey: ['branches'],
+    queryFn: fetchBranches,
+    staleTime: 5 * 60 * 1000, // Cache 5 mins
+  });
 
-  useEffect(() => {
-    // Fetch branches from API
-    const fetchBranches = async () => {
-      setIsLoading(true);
-      try {
-        const response = await getBranches();
-        if (response.success) {
-          // Map branches to include additional stats calculated on the UI side
-          let branchesToProcess = response.data;
-          
-          // If not a superadmin, filter branches to only show the user's branch
-          if (!isSuperAdmin && userBranchId) {
-            branchesToProcess = branchesToProcess.filter(
-              branch => branch.id.toString() === userBranchId
-            );
-          }
-          
-          const extendedBranches = await Promise.all(
-            branchesToProcess.map(async branch => {
-              // Get policy holders, agents, and other data for this branch
-              const policyHoldersResponse = await getPolicyHoldersByBranch(branch.id);
-              const agentsResponse = await getAgentsByBranch(branch.id);
-              
-              // Calculate total premium
-              const policyHolders = policyHoldersResponse.success ? policyHoldersResponse.data : [];
-              const totalPremium = policyHolders.reduce((sum, policy) => {
-                return sum + parseFloat(policy.sum_assured) * 0.05; // Estimated premium of 5% of sum assured
-              }, 0);
-              
-              // Return extended branch with stats
-              return {
-                ...branch,
-                total_policies: policyHolders.length,
-                total_premium: totalPremium.toFixed(2),
-                total_claims: 0, // This could be fetched from a claims API
-                total_agents: agentsResponse.success ? agentsResponse.data.length : 0,
-                status: 'ACTIVE' // Default status for all branches
-              };
-            })
-          );
-          
-          setBranches(extendedBranches);
-          setFilteredBranches(extendedBranches);
-        } else {
-          toast.error("Failed to load branches");
-        }
-      } catch (error) {
-        console.error("Error loading branches:", error);
-        toast.error("An error occurred while loading branches");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchBranches();
-  }, [isSuperAdmin, userBranchId]);
-
-  useEffect(() => {
+  // Filter branches based on permissions and search term
+  const filteredBranches = useMemo(() => {
     let filtered = [...branches];
-    
-    // Filter by search term
+    if (!isSuperAdmin && userBranchId) {
+      filtered = filtered.filter(branch => branch.id === userBranchId);
+    }
     if (searchTerm) {
+      const lowerSearchTerm = searchTerm.toLowerCase();
       filtered = filtered.filter(branch => 
-        branch.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        String(branch.branch_code)?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        branch.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        branch.user_details?.first_name?.toLowerCase().includes(searchTerm.toLowerCase())
+        branch.name?.toLowerCase().includes(lowerSearchTerm) ||
+        String(branch.branch_code)?.toLowerCase().includes(lowerSearchTerm) ||
+        branch.location?.toLowerCase().includes(lowerSearchTerm) ||
+        branch.user_details?.first_name?.toLowerCase().includes(lowerSearchTerm) ||
+        branch.user_details?.last_name?.toLowerCase().includes(lowerSearchTerm)
       );
     }
-    
-    setFilteredBranches(filtered);
-  }, [searchTerm, branches]);
+    return filtered;
+  }, [branches, isSuperAdmin, userBranchId, searchTerm]);
 
-  const handleAddBranch = async () => {
-    // Validate form inputs
-    if (!newBranch.name || !newBranch.branch_code || !newBranch.location) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-    
-    try {
-      // Create branch object to send to API
-      const branchToAdd = {
-        name: newBranch.name,
-        branch_code: parseInt(newBranch.branch_code),
-        location: newBranch.location,
-        company: newBranch.company,
-        company_name: "Easy Life Insurance LTD." // This would come from company API
-      };
-      
-      // Call API to add branch
-      const response = await addBranch(branchToAdd);
-      
-      if (response.success) {
-        // Add the returned branch (with id) to the branches list
-        const newBranchWithStats: ExtendedBranch = {
-          ...response.data,
-          total_policies: 0,
-          total_premium: '0.00',
-          total_claims: 0,
-          total_agents: 0,
-          status: 'ACTIVE'
-        };
-        
-        setBranches([...branches, newBranchWithStats]);
+  // Query for details when the view dialog is open
+  const { 
+    data: viewAgents = [], 
+    isLoading: isLoadingViewAgents 
+  } = useQuery<SalesAgent[], Error>({
+    queryKey: ['agents', selectedBranch?.id],
+    queryFn: () => fetchAgentsForBranch(selectedBranch?.id ?? null),
+    enabled: !!selectedBranch && isViewBranchOpen, // Only fetch when dialog is open and branch selected
+    staleTime: 2 * 60 * 1000, // Cache 2 mins
+  });
+
+  const { 
+    data: viewPolicyHolders = [], 
+    isLoading: isLoadingViewPolicyHolders 
+  } = useQuery<PolicyHolder[], Error>({
+    queryKey: ['policyHolders', selectedBranch?.id],
+    queryFn: () => fetchPolicyHoldersForBranch(selectedBranch?.id ?? null),
+    enabled: !!selectedBranch && isViewBranchOpen,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const { 
+    data: viewAgentReports = [], 
+    isLoading: isLoadingViewAgentReports 
+  } = useQuery<AgentReport[], Error>({
+    queryKey: ['agentReports', selectedBranch?.id],
+    queryFn: () => fetchAgentReportsForBranch(selectedBranch?.id ?? null),
+    enabled: !!selectedBranch && isViewBranchOpen && !isEditBranchOpen, // Fetch only for view dialog staff/reports tab
+    staleTime: 2 * 60 * 1000,
+  });
+  
+  // Calculate derived stats for the view dialog
+  const viewBranchStats = useMemo(() => {
+    const customers = new Set(viewPolicyHolders.map(p => p.customer?.id).filter(Boolean));
+    const totalPremium = viewPolicyHolders.reduce((sum, policy) => sum + parseFloat(policy.sum_assured || '0'), 0); // Using actual sum assured if available
+    return {
+      customerCount: customers.size,
+      policyCount: viewPolicyHolders.length,
+      agentCount: viewAgents.length,
+      totalPremium
+    };
+  }, [viewPolicyHolders, viewAgents]);
+
+  // --- Mutations ---
+  const addBranchMutation = useMutation({
+    mutationFn: (newBranchData: Omit<Branch, 'id' | 'user_details'>) => addBranch(newBranchData),
+    onSuccess: () => {
+      toast.success("Branch added successfully");
+      queryClient.invalidateQueries({ queryKey: ['branches'] }); // Refetch branches list
         setIsAddBranchOpen(false);
-        setNewBranch({
-          name: '',
-          branch_code: '',
-          location: '',
-          company: 1
-        });
-        
-        toast.success("Branch added successfully");
-      } else {
-        toast.error(response.message || "Failed to add branch");
-      }
-    } catch (error) {
-      console.error("Error adding branch:", error);
-      toast.error("An error occurred while adding the branch");
-    }
+      resetBranchForm();
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to add branch: ${error.message}`);
+    },
+  });
+  
+  const updateBranchMutation = useMutation({
+    mutationFn: (branchData: Branch) => updateBranch(branchData), // Assuming updateBranch takes full Branch object
+    onSuccess: () => {
+      toast.success("Branch updated successfully");
+      queryClient.invalidateQueries({ queryKey: ['branches'] });
+      queryClient.invalidateQueries({ queryKey: ['agents', selectedBranch?.id] }); // May need updates if manager changed
+      setIsEditBranchOpen(false);
+      resetBranchForm();
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to update branch: ${error.message}`);
+    },
+  });
+
+  const deleteBranchMutation = useMutation({
+    mutationFn: (branchId: number) => deleteBranch(branchId),
+    onSuccess: () => {
+      toast.success("Branch deleted successfully");
+      queryClient.invalidateQueries({ queryKey: ['branches'] });
+      setIsDeleteBranchOpen(false);
+      setSelectedBranch(null);
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to delete branch: ${error.message}`);
+    },
+  });
+
+  // --- Event Handlers ---
+  const handleAddClick = () => {
+    resetBranchForm();
+    setIsAddBranchOpen(true);
+  };
+  
+  const handleEditClick = (branch: Branch) => {
+    setSelectedBranch(branch);
+    setBranchFormData({
+      name: branch.name || '',
+      branch_code: branch.branch_code || 0,
+      location: branch.location || '',
+      company: branch.company || 1,
+      company_name: branch.company_name || 'Easy Life Insurance LTD.',
+      user: branch.user || null,
+    });
+    setIsEditBranchOpen(true);
+  };
+  
+  const handleDeleteClick = (branch: Branch) => {
+    setSelectedBranch(branch);
+    setIsDeleteBranchOpen(true);
   };
 
-  const handleViewBranch = async (branch: ExtendedBranch) => {
+  const handleViewClick = (branch: Branch) => {
     setSelectedBranch(branch);
     setIsViewBranchOpen(true);
-    
-    // Fetch detailed stats for this branch if we don't have them yet
-    if (!branchStats[branch.id]) {
-      try {
-        // Fetch policy holders for this branch
-        const policyHoldersResponse = await getPolicyHoldersByBranch(branch.id);
-        
-        // Fetch agents for this branch
-        const agentsResponse = await getAgentsByBranch(branch.id);
-        
-        // Collect customer IDs from policy holders
-        const customers = new Set();
-        const policyHolders = policyHoldersResponse.success ? policyHoldersResponse.data : [];
-        policyHolders.forEach(policy => {
-          if (policy.customer?.id) {
-            customers.add(policy.customer.id);
-          }
-        });
-        
-        // Calculate premium
-        const totalPremium = policyHolders.reduce((total, policy) => {
-          return total + parseFloat(policy.sum_assured) * 0.05; // Estimated premium
-        }, 0);
-        
-        // Store stats for this branch
-        setBranchStats({
-          ...branchStats,
-          [branch.id]: {
-            customerCount: customers.size,
-            policyCount: policyHolders.length,
-            agentCount: agentsResponse.success ? agentsResponse.data.length : 0,
-            totalPremium
-          }
-        });
-        
-        // Get agent reports to display in the UI
-        const reportsResponse = await getAgentReportsByBranch(branch.id);
-        
-        // Populate the agents table once the view is opened
-        setTimeout(() => {
-          const agentsContainer = document.getElementById('agents-table-container');
-          if (agentsContainer && agentsResponse.success) {
-            const agents = agentsResponse.data;
-            
-            if (agents.length === 0) {
-              agentsContainer.innerHTML = `
-                <div class="py-8 text-center text-gray-500">
-                  No agents found for this branch.
-                </div>
-              `;
-            } else {
-              agentsContainer.innerHTML = `
-                <table class="w-full">
-                  <thead>
-                    <tr class="border-b">
-                      <th class="text-left py-2 font-medium">Agent Name</th>
-                      <th class="text-left py-2 font-medium">Agent Code</th>
-                      <th class="text-left py-2 font-medium">Status</th>
-                      <th class="text-left py-2 font-medium">Policies Sold</th>
-                      <th class="text-left py-2 font-medium">Commission Rate</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${agents.map(agent => `
-                      <tr class="border-b">
-                        <td class="py-2">${agent.agent_name}</td>
-                        <td class="py-2">${agent.agent_code}</td>
-                        <td class="py-2">
-                          <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                            agent.status === 'ACTIVE' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-gray-100 text-gray-800'
-                          }">
-                            ${agent.status}
-                          </span>
-                        </td>
-                        <td class="py-2">${agent.total_policies_sold}</td>
-                        <td class="py-2">${agent.commission_rate}%</td>
-                      </tr>
-                    `).join('')}
-                  </tbody>
-                </table>
-              `;
-            }
-          }
-          
-          // Populate the agent reports table
-          const reportsContainer = document.getElementById('agent-reports-container');
-          if (reportsContainer) {
-            const reports = reportsResponse.success ? reportsResponse.data : [];
-            
-            if (reports.length === 0) {
-              reportsContainer.innerHTML = `
-                <div class="py-8 text-center text-gray-500">
-                  No agent reports found for this branch.
-                </div>
-              `;
-            } else {
-              reportsContainer.innerHTML = `
-                <table class="w-full">
-                  <thead>
-                    <tr class="border-b">
-                      <th class="text-left py-2 font-medium">Agent</th>
-                      <th class="text-left py-2 font-medium">Reporting Period</th>
-                      <th class="text-left py-2 font-medium">Policies Sold</th>
-                      <th class="text-left py-2 font-medium">Premium</th>
-                      <th class="text-left py-2 font-medium">Commission</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${reports.map(report => `
-                      <tr class="border-b">
-                        <td class="py-2">${report.agent_name}</td>
-                        <td class="py-2">${report.reporting_period}</td>
-                        <td class="py-2">${report.policies_sold}</td>
-                        <td class="py-2">Rs. ${parseFloat(report.total_premium).toLocaleString()}</td>
-                        <td class="py-2">Rs. ${parseFloat(report.commission_earned).toLocaleString()}</td>
-                      </tr>
-                    `).join('')}
-                  </tbody>
-                </table>
-              `;
-            }
-          }
-        }, 100); // Small delay to ensure the DOM elements exist
-      } catch (error) {
-        console.error("Error fetching branch details:", error);
-      }
+  };
+
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { id, value } = e.target;
+    setBranchFormData(prev => ({ ...prev, [id]: id === 'branch_code' || id === 'user' ? (value ? Number(value) : null) : value }));
+  };
+
+  const handleSaveAdd = () => {
+    if (!branchFormData.name || !branchFormData.branch_code || !branchFormData.location) {
+      toast.error("Please fill in Branch Name, Code, and Location.");
+      return;
+    }
+    addBranchMutation.mutate(branchFormData);
+  };
+  
+  const handleSaveUpdate = () => {
+    if (!selectedBranch) return;
+    if (!branchFormData.name || !branchFormData.branch_code || !branchFormData.location) {
+      toast.error("Please fill in Branch Name, Code, and Location.");
+      return;
+    }
+     // Construct the full branch object for update
+     const branchToUpdate: Branch = {
+        ...selectedBranch, // Keep existing fields like id, company_name, user_details
+        name: branchFormData.name,
+        branch_code: branchFormData.branch_code,
+        location: branchFormData.location,
+        company: branchFormData.company,
+        company_name: branchFormData.company_name,
+        user: branchFormData.user,
+      };
+    updateBranchMutation.mutate(branchToUpdate);
+  };
+  
+  const confirmDelete = () => {
+    if (selectedBranch?.id) {
+      deleteBranchMutation.mutate(selectedBranch.id);
     }
   };
 
-  const getBranchStats = (branchId: number) => {
-    // Return cached stats if available
-    if (branchStats[branchId]) {
-      return branchStats[branchId];
-    }
-    
-    // Return default stats
-    return {
-      customerCount: 0,
-      policyCount: 0,
-      agentCount: 0,
-      totalPremium: 0
-    };
+  const resetBranchForm = () => {
+    setSelectedBranch(null);
+    setBranchFormData({
+      name: '',
+      branch_code: 0,
+      location: '',
+      company: 1,
+      company_name: 'Easy Life Insurance LTD.',
+      user: null,
+    });
   };
 
+  // Calculate overall stats
+  const totalAgentsOverall = useMemo(() => branches.reduce((acc, branch) => acc + (branch.user ? 1 : 0), 0), [branches]); // Approximation based on assigned user
+  const totalPoliciesOverall = useMemo(() => viewPolicyHolders.length, [viewPolicyHolders]); // Need a way to get total policies if not viewing a branch
+  const totalPremiumOverall = useMemo(() => viewPolicyHolders.reduce((sum, policy) => sum + parseFloat(policy.sum_assured || '0'), 0), [viewPolicyHolders]); // Only for viewed branch currently
+
+
+  // --- Render ---
   return (
     <DashboardLayout title="Branch Management">
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h1 className="text-3xl font-bold">Branch Management</h1>
           <PermissionGate permission="manage_branches">
             <Button 
               className="flex items-center gap-2"
-              onClick={() => setIsAddBranchOpen(true)}
+              onClick={handleAddClick}
             >
               <Plus className="mr-2 h-4 w-4" />
               Add New Branch
@@ -374,6 +338,7 @@ const BranchManagement = () => {
           </PermissionGate>
         </div>
         
+        {/* Overall Stats Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -381,52 +346,66 @@ const BranchManagement = () => {
               <Building className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{branches.length}</div>
+              {isLoadingBranches ? <Skeleton className="h-7 w-1/2" /> : <div className="text-2xl font-bold">{branches.length}</div>}
             </CardContent>
           </Card>
+          {/* Other stats cards need proper data sources */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Agents</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Branch Managers</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{branches.reduce((acc, branch) => acc + branch.total_agents, 0)}</div>
+               {isLoadingBranches ? <Skeleton className="h-7 w-1/2" /> : <div className="text-2xl font-bold">{totalAgentsOverall}</div>}
+              <p className="text-xs text-muted-foreground">(Based on assigned users)</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Policies</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Policies (Viewed Branch)</CardTitle>
               <FileCheck className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{branches.reduce((acc, branch) => acc + branch.total_policies, 0)}</div>
+               {isLoadingViewPolicyHolders ? <Skeleton className="h-7 w-1/2" /> : <div className="text-2xl font-bold">{totalPoliciesOverall}</div>}
+               <p className="text-xs text-muted-foreground">(Requires endpoint for total)</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Premium</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Premium (Viewed Branch)</CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {formatCurrency(
-                  branches.reduce((acc, branch) => acc + parseFloat(branch.total_premium), 0)
-                )}
-              </div>
+              {isLoadingViewPolicyHolders ? <Skeleton className="h-7 w-1/2" /> : <div className="text-2xl font-bold">{formatCurrency(totalPremiumOverall)}</div>}
+              <p className="text-xs text-muted-foreground">(Requires endpoint for total)</p>
             </CardContent>
           </Card>
         </div>
         
+        {/* Search Bar */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search branches..."
+            placeholder="Search branches by name, code, location, manager..."
             className="pl-10"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            disabled={isLoadingBranches}
           />
         </div>
         
+        {/* Error Loading Branches */}
+        {isErrorBranches && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error Loading Branches</AlertTitle>
+            <AlertDescription>
+              {errorBranches?.message || 'An unexpected error occurred.'} Please try refreshing.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Branch Table */}
         <div className="rounded-md border">
           <Table>
             <TableHeader>
@@ -435,24 +414,24 @@ const BranchManagement = () => {
                 <TableHead>Name</TableHead>
                 <TableHead>Location</TableHead>
                 <TableHead>Manager</TableHead>
-                <TableHead>Agents</TableHead>
-                <TableHead>Policies</TableHead>
-                <TableHead>Premium</TableHead>
+                {/*<TableHead>Agents</TableHead> */}
+                {/*<TableHead>Policies</TableHead> */}
+                {/*<TableHead>Premium</TableHead> */}
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="h-24 text-center">
-                    Loading branches...
-                  </TableCell>
+              {isLoadingBranches ? (
+                [...Array(5)].map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell colSpan={6}><Skeleton className="h-8 w-full" /></TableCell> 
                 </TableRow>
+                ))
               ) : filteredBranches.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="h-24 text-center">
-                    No branches found.
+                  <TableCell colSpan={6} className="h-24 text-center"> 
+                    No branches found{searchTerm ? ' matching your search' : ''}.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -461,30 +440,42 @@ const BranchManagement = () => {
                     <TableCell className="font-medium">{branch.branch_code}</TableCell>
                     <TableCell>{branch.name}</TableCell>
                     <TableCell>{branch.location}</TableCell>
-                    <TableCell>{branch.user_details?.first_name} {branch.user_details?.last_name}</TableCell>
-                    <TableCell>{branch.total_agents}</TableCell>
-                    <TableCell>{branch.total_policies}</TableCell>
-                    <TableCell>{formatCurrency(parseFloat(branch.total_premium))}</TableCell>
+                    <TableCell>{branch.user_details?.first_name} {branch.user_details?.last_name || 'N/A'}</TableCell>
+                    {/* <TableCell>{branch.total_agents}</TableCell> */}
+                    {/* <TableCell>{branch.total_policies}</TableCell> */}
+                    {/* <TableCell>{formatCurrency(parseFloat(branch.total_premium))}</TableCell> */}
                     <TableCell>
-                      <Badge variant="default">
-                        {branch.status}
+                      <Badge variant={branch.user_details?.is_active ? "default" : "outline"}>
+                        {branch.user_details?.is_active ? 'Active' : 'Inactive'} {/* Assuming status based on manager */}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end space-x-2">
+                      <div className="flex justify-end space-x-1">
                         <Button
                           variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewBranch(branch)}
+                          size="icon"
+                          onClick={() => handleViewClick(branch)}
+                          title="View Details"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
                         <PermissionGate permission="manage_branches">
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon"
+                            onClick={() => handleEditClick(branch)}
+                            title="Edit Branch"
                           >
                             <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-red-600 hover:text-red-700"
+                            onClick={() => handleDeleteClick(branch)}
+                            title="Delete Branch"
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </PermissionGate>
                       </div>
@@ -495,171 +486,89 @@ const BranchManagement = () => {
             </TableBody>
           </Table>
         </div>
-        
-        {selectedBranch && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>{selectedBranch.name}</CardTitle>
-                <div className="text-sm text-muted-foreground">Branch Code: {selectedBranch.branch_code}</div>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-medium mb-2">Branch Information</h3>
-                  <div className="space-y-2">
-                    <div className="flex items-center">
-                      <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <span>{selectedBranch.location}</span>
-                    </div>
-                    {selectedBranch.user_details?.email && (
-                      <div className="flex items-center">
-                        <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span>{selectedBranch.user_details.email}</span>
-                      </div>
-                    )}
-                    {selectedBranch.user_details?.phone && (
-                      <div className="flex items-center">
-                        <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <span>{selectedBranch.user_details.phone}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                <div>
-                  <h3 className="text-lg font-medium mb-2">Branch Details</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Manager</p>
-                      <p className="font-medium">
-                        {selectedBranch.user_details ? 
-                          `${selectedBranch.user_details.first_name} ${selectedBranch.user_details.last_name}` : 
-                          'Not assigned'}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Company</p>
-                      <p className="font-medium">{selectedBranch.company_name}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Status</p>
-                      <Badge variant="default">
-                        {selectedBranch.status}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>Branch Performance</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium">Total Agents</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{selectedBranch.total_agents}</div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium">Total Policies</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{selectedBranch.total_policies}</div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium">Total Claims</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{selectedBranch.total_claims}</div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium">Total Premium</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{formatCurrency(parseFloat(selectedBranch.total_premium))}</div>
-                    </CardContent>
-                  </Card>
-                </div>
-                
-                <div className="flex justify-end">
-                  {isSuperAdmin && (
-                    <Button variant="outline">
-                      <Edit className="mr-2 h-4 w-4" />
-                      Edit Branch Details
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
       </div>
       
+      {/* --- Dialogs --- */}
+      
       {/* Add Branch Dialog */}
-      <Dialog open={isAddBranchOpen} onOpenChange={setIsAddBranchOpen}>
+      <Dialog open={isAddBranchOpen} onOpenChange={(open) => { if (!open) resetBranchForm(); setIsAddBranchOpen(open); }}>
         <DialogContent className="sm:max-w-[525px]">
           <DialogHeader>
             <DialogTitle>Add New Branch</DialogTitle>
-            <DialogDescription>
-              Enter the details for the new branch. Click save when you're done.
-            </DialogDescription>
+            <DialogDescription>Enter details for the new branch.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            {/* Form fields using branchFormData and handleFormChange */}
             <div className="space-y-2">
               <Label htmlFor="name">Branch Name *</Label>
-              <Input 
-                id="name" 
-                value={newBranch.name}
-                onChange={(e) => setNewBranch({...newBranch, name: e.target.value})}
-                required
-              />
+              <Input id="name" value={branchFormData.name} onChange={handleFormChange} required />
             </div>
-            
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="branch_code">Branch Code *</Label>
-                <Input 
-                  id="branch_code" 
-                  value={newBranch.branch_code}
-                  type="number"
-                  onChange={(e) => setNewBranch({...newBranch, branch_code: e.target.value})}
-                  required
-                />
+                <Input id="branch_code" type="number" value={branchFormData.branch_code || ''} onChange={handleFormChange} required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="company">Company *</Label>
-                <Input 
-                  id="company" 
-                  value="Easy Life Insurance LTD."
-                  disabled
-                />
+                <Label htmlFor="company">Company</Label>
+                <Input id="company" value={branchFormData.company_name} onChange={handleFormChange} required />
               </div>
             </div>
-            
             <div className="space-y-2">
               <Label htmlFor="location">Location *</Label>
-              <Input 
-                id="location"
-                value={newBranch.location}
-                onChange={(e) => setNewBranch({...newBranch, location: e.target.value})}
-                required
-              />
+              <Input id="location" value={branchFormData.location} onChange={handleFormChange} required />
+            </div>
+             <div className="space-y-2">
+              <Label htmlFor="user">Branch Manager ID (Optional)</Label>
+              <Input id="user" type="number" placeholder="Enter User ID" value={branchFormData.user || ''} onChange={handleFormChange} />
+               {/* Needs a better way to select user - e.g., dropdown/search */}
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddBranchOpen(false)}>Cancel</Button>
-            <Button onClick={handleAddBranch}>Save Branch</Button>
+            <Button onClick={handleSaveAdd} disabled={addBranchMutation.isPending}>
+              {addBranchMutation.isPending ? 'Saving...' : 'Save Branch'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+       {/* Edit Branch Dialog */}
+       <Dialog open={isEditBranchOpen} onOpenChange={(open) => { if (!open) resetBranchForm(); setIsEditBranchOpen(open); }}>
+        <DialogContent className="sm:max-w-[525px]">
+          <DialogHeader>
+            <DialogTitle>Edit Branch: {selectedBranch?.name}</DialogTitle>
+            <DialogDescription>Update branch details.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            {/* Form fields using branchFormData and handleFormChange */}
+             <div className="space-y-2">
+              <Label htmlFor="name">Branch Name *</Label>
+              <Input id="name" value={branchFormData.name} onChange={handleFormChange} required />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="branch_code">Branch Code *</Label>
+                <Input id="branch_code" type="number" value={branchFormData.branch_code || ''} onChange={handleFormChange} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="company">Company</Label>
+                <Input id="company" value={branchFormData.company_name} onChange={handleFormChange} required />
+              </div>
+            </div>
+             <div className="space-y-2">
+              <Label htmlFor="location">Location *</Label>
+              <Input id="location" value={branchFormData.location} onChange={handleFormChange} required />
+            </div>
+             <div className="space-y-2">
+              <Label htmlFor="user">Branch Manager ID (Optional)</Label>
+              <Input id="user" type="number" placeholder="Enter User ID" value={branchFormData.user || ''} onChange={handleFormChange} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditBranchOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveUpdate} disabled={updateBranchMutation.isPending}>
+               {updateBranchMutation.isPending ? 'Saving...' : 'Update Branch'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -667,11 +576,11 @@ const BranchManagement = () => {
       {/* View Branch Dialog */}
       {selectedBranch && (
         <Dialog open={isViewBranchOpen} onOpenChange={setIsViewBranchOpen}>
-          <DialogContent className="sm:max-w-[700px]">
+          <DialogContent className="max-w-3xl"> {/* Wider dialog */}
             <DialogHeader>
-              <DialogTitle>Branch Details</DialogTitle>
+              <DialogTitle>{selectedBranch.name}</DialogTitle>
               <DialogDescription>
-                Viewing details for {selectedBranch.name}
+                Branch Code: {selectedBranch.branch_code} | Location: {selectedBranch.location}
               </DialogDescription>
             </DialogHeader>
             
@@ -683,181 +592,131 @@ const BranchManagement = () => {
               </TabsList>
               
               {/* Overview Tab */}
-              <TabsContent value="overview" className="space-y-4">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-500">Branch ID</h3>
-                      <p>{selectedBranch.id}</p>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-500">Branch Code</h3>
-                      <p>{selectedBranch.branch_code}</p>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-500">Location</h3>
-                      <p>{selectedBranch.location}</p>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-500">Company</h3>
-                      <p>{selectedBranch.company_name}</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  {(() => {
-                    const stats = getBranchStats(selectedBranch.id);
-                    return (
+              <TabsContent value="overview" className="space-y-4 pt-4">
+                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                   {isLoadingViewPolicyHolders || isLoadingViewAgents ? (
+                     [...Array(4)].map((_,i) => <Skeleton key={i} className="h-24 w-full" />)
+                   ) : (
                       <>
                         <Card>
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium">Customers</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="text-2xl font-bold">{stats.customerCount}</div>
-                          </CardContent>
+                          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Customers</CardTitle></CardHeader>
+                          <CardContent><div className="text-2xl font-bold">{viewBranchStats.customerCount}</div></CardContent>
                         </Card>
-                        
                         <Card>
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium">Policies</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="text-2xl font-bold">{stats.policyCount}</div>
-                          </CardContent>
+                          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Policies</CardTitle></CardHeader>
+                          <CardContent><div className="text-2xl font-bold">{viewBranchStats.policyCount}</div></CardContent>
                         </Card>
-                        
                         <Card>
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium">Agents</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="text-2xl font-bold">{stats.agentCount}</div>
-                          </CardContent>
+                          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Agents</CardTitle></CardHeader>
+                          <CardContent><div className="text-2xl font-bold">{viewBranchStats.agentCount}</div></CardContent>
                         </Card>
-                        
                         <Card>
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium">Premium Collected</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="text-2xl font-bold">Rs. {stats.totalPremium.toLocaleString()}</div>
-                          </CardContent>
+                          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Total Premium</CardTitle></CardHeader>
+                          <CardContent><div className="text-2xl font-bold">{formatCurrency(viewBranchStats.totalPremium)}</div></CardContent>
                         </Card>
                       </>
-                    );
-                  })()}
+                   )}
                 </div>
+                 {/* Add more overview details if needed */}
               </TabsContent>
               
               {/* Staff Tab */}
-              <TabsContent value="staff">
+              <TabsContent value="staff" className="pt-4">
                 <div className="space-y-4">
                   <h3 className="font-medium flex items-center gap-2">
-                    <Users size={16} />
-                    Branch Manager
+                    <Users size={16} /> Branch Manager
                   </h3>
-                  
-                  {selectedBranch.user_details && (
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <h4 className="text-sm font-medium text-gray-500">Name</h4>
-                          <p>{selectedBranch.user_details.first_name} {selectedBranch.user_details.last_name}</p>
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-medium text-gray-500">Status</h4>
-                          <Badge variant={selectedBranch.user_details.is_active ? "default" : "outline"}>
-                            {selectedBranch.user_details.is_active ? "Active" : "Inactive"}
-                          </Badge>
-                        </div>
-                        {selectedBranch.user_details.email && (
-                          <div>
-                            <h4 className="text-sm font-medium text-gray-500">Email</h4>
-                            <p>{selectedBranch.user_details.email}</p>
-                          </div>
-                        )}
-                        {selectedBranch.user_details.phone && (
-                          <div>
-                            <h4 className="text-sm font-medium text-gray-500">Phone</h4>
-                            <p>{selectedBranch.user_details.phone}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                  {selectedBranch.user_details ? (
+                     <Card><CardContent className="p-4 grid grid-cols-2 gap-2 text-sm">
+                       <div><span className="text-muted-foreground">Name:</span> {selectedBranch.user_details.first_name} {selectedBranch.user_details.last_name}</div>
+                       <div><span className="text-muted-foreground">Status:</span> <Badge variant={selectedBranch.user_details.is_active ? "default" : "outline"}>{selectedBranch.user_details.is_active ? "Active" : "Inactive"}</Badge></div>
+                       {selectedBranch.user_details.email && <div><span className="text-muted-foreground">Email:</span> {selectedBranch.user_details.email}</div>}
+                       {selectedBranch.user_details.phone && <div><span className="text-muted-foreground">Phone:</span> {selectedBranch.user_details.phone}</div>}
+                     </CardContent></Card>
+                  ) : <p className="text-muted-foreground text-sm">No manager assigned.</p>}
                   
                   <h3 className="font-medium flex items-center gap-2 mt-6">
-                    <Users size={16} />
-                    Branch Agents
+                    <Users size={16} /> Branch Agents ({viewAgents.length})
                   </h3>
-                  
-                  <div id="agents-table-container">
-                    {/* This will be dynamically populated with agents data */}
-                    Loading agents...
+                   <div className="rounded-md border max-h-60 overflow-y-auto">
+                     {isLoadingViewAgents ? <Skeleton className="h-32 w-full" /> : viewAgents.length === 0 ? (
+                       <p className="p-4 text-center text-muted-foreground">No agents found for this branch.</p>
+                     ) : (
+                       <Table>
+                         <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Code</TableHead><TableHead>Status</TableHead><TableHead>Policies</TableHead></TableRow></TableHeader>
+                         <TableBody>
+                           {viewAgents.map(agent => (
+                             <TableRow key={agent.id}>
+                               <TableCell>{agent.agent_name}</TableCell>
+                               <TableCell>{agent.agent_code}</TableCell>
+                               <TableCell><Badge variant={agent.status === 'ACTIVE' ? 'default' : 'outline'}>{agent.status}</Badge></TableCell>
+                               <TableCell>{agent.total_policies_sold}</TableCell>
+                              </TableRow>
+                           ))}
+                         </TableBody>
+                       </Table>
+                     )}
                   </div>
                 </div>
               </TabsContent>
               
               {/* Reports Tab */}
-              <TabsContent value="reports">
-                <div className="space-y-4">
-                  <h3 className="font-medium flex items-center gap-2">
-                    <ChartBar size={16} />
-                    Branch Performance
-                  </h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Premium Collection</CardTitle>
-                        <CardDescription>
-                          Monthly premium collection for {selectedBranch.name}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="h-[200px] flex items-center justify-center text-gray-500">
-                          Chart visualization would appear here
-                        </div>
-                      </CardContent>
-                    </Card>
-                    
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Policy Distribution</CardTitle>
-                        <CardDescription>
-                          Policy types distribution for {selectedBranch.name}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="h-[200px] flex items-center justify-center text-gray-500">
-                          Chart visualization would appear here
-                        </div>
-                      </CardContent>
-                    </Card>
+              <TabsContent value="reports" className="pt-4">
+                 <h3 className="font-medium mb-4">Agent Reports ({viewAgentReports.length})</h3>
+                  <div className="rounded-md border max-h-80 overflow-y-auto">
+                    {isLoadingViewAgentReports ? <Skeleton className="h-48 w-full" /> : viewAgentReports.length === 0 ? (
+                       <p className="p-4 text-center text-muted-foreground">No agent reports found for this branch.</p>
+                     ) : (
+                       <Table>
+                          <TableHeader><TableRow><TableHead>Agent</TableHead><TableHead>Period</TableHead><TableHead>Policies Sold</TableHead><TableHead>Premium</TableHead><TableHead>Commission</TableHead></TableRow></TableHeader>
+                         <TableBody>
+                            {viewAgentReports.map(report => (
+                             <TableRow key={report.id}>
+                               <TableCell>{report.agent_name}</TableCell>
+                               <TableCell>{report.reporting_period}</TableCell>
+                               <TableCell>{report.policies_sold}</TableCell>
+                               <TableCell>{formatCurrency(parseFloat(report.total_premium))}</TableCell>
+                               <TableCell>{formatCurrency(parseFloat(report.commission_earned))}</TableCell>
+                              </TableRow>
+                           ))}
+                         </TableBody>
+                       </Table>
+                     )}
                   </div>
-                  
-                  <h3 className="font-medium mt-4">Agent Reports</h3>
-                  
-                  <div id="agent-reports-container">
-                    {/* This will be dynamically populated with agent reports data */}
-                    Loading agent reports...
-                  </div>
-                </div>
+                 {/* Add more charts/data here later */}
               </TabsContent>
             </Tabs>
             
-            <DialogFooter>
+            <DialogFooter className="mt-4">
               <Button variant="outline" onClick={() => setIsViewBranchOpen(false)}>Close</Button>
-              <Button variant="default">
-                <Edit size={16} className="mr-2" />
-                Edit Branch
+              <PermissionGate permission="manage_branches">
+                <Button onClick={() => { setIsViewBranchOpen(false); handleEditClick(selectedBranch); }}>
+                  <Edit size={16} className="mr-2" /> Edit Branch
               </Button>
+              </PermissionGate>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteBranchOpen} onOpenChange={setIsDeleteBranchOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete the branch "{selectedBranch?.name}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteBranchOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={confirmDelete} disabled={deleteBranchMutation.isPending}>
+              {deleteBranchMutation.isPending ? 'Deleting...' : 'Delete Branch'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </DashboardLayout>
   );
 };

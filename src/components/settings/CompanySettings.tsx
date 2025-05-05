@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 
 interface CompanySettingsProps {
-  isSuperAdmin: boolean;
+  issuperadmin: boolean;
 }
 
 const formSchema = z.object({
@@ -31,7 +31,7 @@ const formSchema = z.object({
   registrationNumber: z.string().min(1, { message: 'Registration number is required' }),
 });
 
-export const CompanySettings: React.FC<CompanySettingsProps> = ({ isSuperAdmin }) => {
+export const CompanySettings: React.FC<CompanySettingsProps> = ({ issuperadmin }) => {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -70,7 +70,7 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({ isSuperAdmin }
                   <FormItem>
                     <FormLabel>Company Name</FormLabel>
                     <FormControl>
-                      <Input {...field} disabled={!isSuperAdmin} />
+                      <Input {...field} disabled={!issuperadmin} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -84,7 +84,7 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({ isSuperAdmin }
                   <FormItem>
                     <FormLabel>Email Address</FormLabel>
                     <FormControl>
-                      <Input {...field} disabled={!isSuperAdmin} />
+                      <Input {...field} disabled={!issuperadmin} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -98,7 +98,7 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({ isSuperAdmin }
                   <FormItem>
                     <FormLabel>Phone Number</FormLabel>
                     <FormControl>
-                      <Input {...field} disabled={!isSuperAdmin} />
+                      <Input {...field} disabled={!issuperadmin} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -112,7 +112,7 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({ isSuperAdmin }
                   <FormItem>
                     <FormLabel>Website</FormLabel>
                     <FormControl>
-                      <Input {...field} disabled={!isSuperAdmin} />
+                      <Input {...field} disabled={!issuperadmin} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -126,7 +126,7 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({ isSuperAdmin }
                   <FormItem>
                     <FormLabel>PAN Number</FormLabel>
                     <FormControl>
-                      <Input {...field} disabled={!isSuperAdmin} />
+                      <Input {...field} disabled={!issuperadmin} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -140,7 +140,7 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({ isSuperAdmin }
                   <FormItem>
                     <FormLabel>Registration Number</FormLabel>
                     <FormControl>
-                      <Input {...field} disabled={!isSuperAdmin} />
+                      <Input {...field} disabled={!issuperadmin} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -155,14 +155,14 @@ export const CompanySettings: React.FC<CompanySettingsProps> = ({ isSuperAdmin }
                 <FormItem>
                   <FormLabel>Company Address</FormLabel>
                   <FormControl>
-                    <Textarea {...field} disabled={!isSuperAdmin} />
+                    <Textarea {...field} disabled={!issuperadmin} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
             
-            {isSuperAdmin && (
+            {issuperadmin && (
               <div className="flex justify-end">
                 <Button type="submit">Save Changes</Button>
               </div>

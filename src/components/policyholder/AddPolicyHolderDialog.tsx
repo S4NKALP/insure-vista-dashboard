@@ -92,7 +92,7 @@ export const AddPolicyHolderDialog: React.FC<AddPolicyHolderDialogProps> = ({
         gender: values.gender,
       },
       policy: parseInt(values.policy_id),
-      branch: user?.branchId ? parseInt(user.branchId) : undefined,
+      branch: user?.branch || undefined,
       sum_assured: values.sum_assured,
       duration_years: parseInt(values.duration_years),
       date_of_birth: values.date_of_birth,

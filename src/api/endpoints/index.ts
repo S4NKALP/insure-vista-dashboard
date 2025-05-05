@@ -1,38 +1,85 @@
-// This file exports the API functions that will be used throughout the application
-// We import from the mock API now, but this can be easily switched to real API implementation
-// without changing any component code
+/**
+ * API Endpoints index file that re-exports all API functions.
+ * This helps ensure we have a consistent API interface.
+ */
 
 import * as mockApi from '../mock/api';
 
-// Export the mock implementations for now
-// To switch to real API implementation, replace these with imports from a real API module
-export const getBranches = mockApi.getBranches;
-export const getBranchById = mockApi.getBranchById;
-export const addBranch = mockApi.addBranch;
-export const updateBranch = mockApi.updateBranch;
-export const deleteBranch = mockApi.deleteBranch;
+export const {
+  // Auth
+  login,
+  logout,
+  
+  // User Management
+  getUsers,
+  addUser,
+  updateUser,
+  deleteUser,
+  
+  // Branch Management
+  getBranches,
+  getBranchById,
+  addBranch,
+  updateBranch,
+  deleteBranch,
+  
+  // Agent Management
+  getAgents,
+  getAgentById,
+  getAgentsByBranch,
+  addAgent,
+  updateAgent,
+  deleteAgent,
+  
+  // Agent Applications
+  getAgentApplications,
+  getAgentApplicationsByBranch,
+  addAgentApplication,
+  updateAgentApplicationStatus,
+  
+  // Agent Reports
+  getAgentReports,
+  getAgentReportsByBranch,
+  
+  // Customer Management
+  getCustomers,
+  getCustomerById,
+  
+  // Policy Management
+  getPolicies,
+  getPolicyHolders,
+  getPolicyHolderById,
+  getPolicyHoldersByBranch,
+  
+  // Premium Payments
+  getPremiumPayments,
+  addPremiumPayment,
+  updatePremiumPayment,
+  
+  // KYC
+  getKYC,
+  
+  // Claims
+  getClaimRequests,
+  getClaimProcessing,
+  
+  // Loans
+  getLoans,
+  getLoanRepayments,
+  
+  // Dashboard
+  getDashboardStats,
+  
+  // Underwriting
+  getUnderwritingData,
+  
+  // Companies
+  getCompanies
+} = mockApi;
 
-export const getPolicyHolders = mockApi.getPolicyHolders;
-export const getPolicyHolderById = mockApi.getPolicyHolderById;
-export const getPolicyHoldersByBranch = mockApi.getPolicyHoldersByBranch;
-
-export const getAgents = mockApi.getAgents;
-export const getAgentById = mockApi.getAgentById;
-export const getAgentsByBranch = mockApi.getAgentsByBranch;
-
-export const getAgentReports = mockApi.getAgentReports;
-export const getAgentReportsByBranch = mockApi.getAgentReportsByBranch;
-
-export const getCustomers = mockApi.getCustomers;
-export const getCustomerById = mockApi.getCustomerById;
-
-export const login = mockApi.login;
-
-export const getCompanies = mockApi.getCompanies;
-export const getPolicies = mockApi.getPolicies;
-
-export const getDashboardStats = mockApi.getDashboardStats;
-
-// When implementing real API endpoints, you can create a file like:
+// When implementing real API endpoints, create a file like:
 // src/api/real/api.ts with real API implementations
-// Then update imports here to switch from mock to real 
+// Then update this file to export from the real API instead 
+
+// Export everything from mock API
+export * from '../mock/api'; 

@@ -16,7 +16,7 @@ const LoanManagement: React.FC = () => {
   const [repaymentDialogOpen, setRepaymentDialogOpen] = React.useState(false);
   const [selectedLoan, setSelectedLoan] = React.useState<any>(null);
 
-  const isSuperAdmin = user?.role === 'superadmin';
+  const issuperadmin = user?.role === 'superadmin';
 
   // In a real app, this would come from an API
   const loanStats = {
@@ -84,16 +84,16 @@ const LoanManagement: React.FC = () => {
             <TabsTrigger value="completed">Completed</TabsTrigger>
           </TabsList>
           <TabsContent value="pending">
-            <LoansList status="pending" canEdit={isSuperAdmin} onRepayment={handleRepayment} />
+            <LoansList status="pending" canEdit={issuperadmin} onRepayment={handleRepayment} />
           </TabsContent>
           <TabsContent value="approved">
-            <LoansList status="approved" canEdit={isSuperAdmin} onRepayment={handleRepayment} />
+            <LoansList status="approved" canEdit={issuperadmin} onRepayment={handleRepayment} />
           </TabsContent>
           <TabsContent value="rejected">
-            <LoansList status="rejected" canEdit={isSuperAdmin} onRepayment={handleRepayment} />
+            <LoansList status="rejected" canEdit={issuperadmin} onRepayment={handleRepayment} />
           </TabsContent>
           <TabsContent value="completed">
-            <LoansList status="completed" canEdit={isSuperAdmin} onRepayment={handleRepayment} />
+            <LoansList status="completed" canEdit={issuperadmin} onRepayment={handleRepayment} />
           </TabsContent>
         </Tabs>
       </div>

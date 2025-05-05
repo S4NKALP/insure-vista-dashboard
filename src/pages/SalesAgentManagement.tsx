@@ -64,9 +64,9 @@ const SalesAgentManagement: React.FC = () => {
   const [commissionRate, setCommissionRate] = useState('');
   const [isActive, setIsActive] = useState(true);
   
-  const isSuperAdmin = user?.role === 'superadmin';
+  const issuperadmin = user?.role === 'superadmin';
   const isBranchAdmin = user?.role === 'branch';
-  const branchId = user?.role === 'branch' ? Number(user?.branchId) : undefined;
+  const branchId = user?.role === 'branch' ? Number(user?.branch) : undefined;
   
   // Mock data based on data.json
   const agents: SalesAgent[] = [
@@ -433,7 +433,7 @@ const SalesAgentManagement: React.FC = () => {
           
           <TabsContent value="applications" className="py-2">
             <AgentApplicationList 
-              isSuperAdmin={isSuperAdmin} 
+              issuperadmin={issuperadmin} 
               branchId={branchId} 
             />
           </TabsContent>

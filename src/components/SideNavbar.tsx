@@ -22,7 +22,7 @@ interface NavItem {
   path: string;
   icon: React.ReactNode;
   label: string;
-  permission?: string;
+  permission?: string;  
 }
 
 interface SideNavbarProps {
@@ -44,8 +44,7 @@ export const SideNavbar: React.FC<SideNavbarProps> = ({ collapsed }) => {
     { path: '/policy-holders', icon: <FileText size={20} />, label: 'Policy Holders', permission: 'view_policy_holders' },
     { path: '/loans', icon: <Banknote size={20} />, label: 'Loans', permission: 'view_loans' },
     { path: '/claims', icon: <ClipboardCheck size={20} />, label: 'Claims', permission: 'view_claims' },
-    { path: '/payments', icon: <CreditCard size={20} />, label: 'Payments', permission: 'view_claims' },
-    { path: '/premium-payments', icon: <Receipt size={20} />, label: 'Premium Payments', permission: 'view_premium_payments' },
+    { path: '/payments', icon: <CreditCard size={20} />, label: 'Payments', permission: 'view_premium_payments' },
     { path: '/reports', icon: <ChartBar size={20} />, label: 'Reports' },
     { path: '/settings', icon: <Settings size={20} />, label: 'Settings', permission: 'manage_configuration' },
   ];

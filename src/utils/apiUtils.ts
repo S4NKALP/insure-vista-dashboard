@@ -15,27 +15,25 @@ export const useBranchAwareAPI = () => {
    */
   const getPolicyHolders = async (): Promise<ApiResponse<any>> => {
     if (!isSuperAdmin && userBranchId) {
-      return API.getPolicyHolders(parseInt(userBranchId));
+      return API.getPolicyHolders(userBranchId);
     }
     return API.getPolicyHolders();
   };
-  
   /**
    * Get agents with branch filtering for branch admins
    */
   const getAgents = async (): Promise<ApiResponse<any>> => {
     if (!isSuperAdmin && userBranchId) {
-      return API.getAgentsByBranch(parseInt(userBranchId));
+      return API.getAgentsByBranch(userBranchId);
     }
     return API.getAgents();
   };
-  
   /**
    * Get agent reports with branch filtering for branch admins
    */
   const getAgentReports = async (): Promise<ApiResponse<any>> => {
     if (!isSuperAdmin && userBranchId) {
-      return API.getAgentReportsByBranch(parseInt(userBranchId));
+      return API.getAgentReportsByBranch(userBranchId);
     }
     return API.getAgentReports();
   };

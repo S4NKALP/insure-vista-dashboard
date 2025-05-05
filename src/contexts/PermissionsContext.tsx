@@ -59,7 +59,7 @@ export type Permission =
 
 interface PermissionsContextType {
   hasPermission: (permission: Permission) => boolean;
-  userBranchId: string | null;
+  userBranchId: number | null;
   isBranchAdmin: boolean;
   isSuperAdmin: boolean;
 }
@@ -70,7 +70,7 @@ export const PermissionsProvider: React.FC<{ children: ReactNode }> = ({ childre
   const { user } = useAuth();
   
   const userBranchId = useMemo(() => {
-    return user?.branchId || null;
+    return user?.branch || null;
   }, [user]);
   
   const isBranchAdmin = useMemo(() => {
@@ -184,7 +184,7 @@ export const PermissionsProvider: React.FC<{ children: ReactNode }> = ({ childre
   };
   
   return (
-    <PermissionsContext.Provider value={value}>
+    <PermissionsContext.Provider value={value as PermissionsContextType}>
       {children}
     </PermissionsContext.Provider>
   );
