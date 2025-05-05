@@ -13,7 +13,7 @@ import { SsvConfig } from "@/components/policy/SsvConfig";
 import { usePermissions } from '@/contexts/PermissionsContext';
 import PermissionGate from '@/components/PermissionGate';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { sampleData } from '@/utils/data';
+
 
 export default function PolicyManagement() {
   const [activeTab, setActiveTab] = useState("policies");

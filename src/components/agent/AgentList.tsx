@@ -52,8 +52,10 @@ const fetchAgents = async (issuperadmin: boolean, branchId?: string): Promise<Sa
   console.log(`Fetching ${issuperadmin ? 'all' : 'branch'} agents (${issuperadmin ? 'superadmin' : `Branch ID: ${branchId}`})`);
   
   try {
-    const fetchFn = issuperadmin ? getAgents : () => getAgentsByBranch(Number(branchId));
-    const response = await fetchFn();
+    // Use the appropriate function based on user role
+    const response = issuperadmin 
+      ? await getAgents() 
+      : await getAgentsByBranch(Number(branchId));
     
     console.log('Sales agents response:', {
       success: response.success,
@@ -62,11 +64,40 @@ const fetchAgents = async (issuperadmin: boolean, branchId?: string): Promise<Sa
       firstAgent: Array.isArray(response.data) && response.data.length > 0 ? response.data[0] : null
     });
     
+    // Ensure response.data is an array before returning
     if (response.success && Array.isArray(response.data)) {
       if (response.data.length === 0) {
         console.warn('API returned empty array of agents. This could be normal or might indicate an issue.');
       }
       return response.data;
+    } else if (response.success && response.data) {
+      // Handle case where data might be returned in a different format
+      console.warn("API returned data in unexpected format, attempting to convert:", response.data);
+      
+      // If data is an object with agent properties, wrap it in an array
+      if (!Array.isArray(response.data) && (response.data as SalesAgent).id) {
+        return [{
+          id: (response.data as SalesAgent).id,
+          branch_name: (response.data as SalesAgent).branch_name || '',
+          agent_name: (response.data as SalesAgent).agent_name || '',
+          agent_code: (response.data as SalesAgent).agent_code || '',
+          status: (response.data as SalesAgent).status || '',
+          commission_rate: (response.data as SalesAgent).commission_rate || '0',
+          total_policies_sold: (response.data as SalesAgent).total_policies_sold || 0,
+          total_premium_collected: (response.data as SalesAgent).total_premium_collected || '0',
+          branch: (response.data as SalesAgent).branch || null,
+         
+          is_active: (response.data as SalesAgent).is_active || false, // Default to false if not provided
+        }];
+      }
+      
+      // Try to extract array from response object if data is nested
+      const possibleArrays = Object.values(response.data).filter(value => Array.isArray(value));
+      if (possibleArrays.length > 0) {
+        return possibleArrays[0];
+      }
+      
+      return [];
     } else {
       console.error("API Error - unexpected format in agent response:", response);
       throw new Error(response.message || 'Failed to fetch agents - unexpected data format');
@@ -91,6 +122,12 @@ const fetchBranches = async (): Promise<Branch[]> => {
     
     if (response.success && Array.isArray(response.data)) {
       return response.data;
+    } else if (response.success && response.data) {
+      // Try to handle unexpected data format
+      if (Array.isArray(Object.values(response.data)[0])) {
+        return Object.values(response.data)[0];
+      }
+      return [];
     } else {
       console.error("API Error - unexpected format in branches response:", response);
       throw new Error(response.message || 'Failed to fetch branches - unexpected data format');
@@ -314,6 +351,18 @@ export const AgentList = ({ issuperadmin, branchId }: AgentListProps) => {
              </AlertDescription>
            </Alert>
          )}
+
+        {/* Debug Info - Remove in production */}
+        {agents?.length === 0 && !isLoadingAgents && !isErrorAgents && (
+          <Alert variant="default" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>No Agents Found</AlertTitle>
+            <AlertDescription>
+              API returned successfully but with no agents. User role: {issuperadmin ? 'Superadmin' : 'Branch Admin'}.
+              {!issuperadmin && branchId ? ` Branch ID: ${branchId}` : ''}
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="rounded-md border">
           <Table>

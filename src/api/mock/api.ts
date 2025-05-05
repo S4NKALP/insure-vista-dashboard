@@ -254,6 +254,7 @@ export const getPolicyHoldersByBranch = async (branchId: number): Promise<ApiRes
  * Fetches all sales agents.
  * GET /api/sales-agents/
  */
+
 export const getAgents = async (): Promise<ApiResponse<SalesAgent[]>> => {
   console.log("Fetching all sales agents from API...");
   
@@ -269,19 +270,45 @@ export const getAgents = async (): Promise<ApiResponse<SalesAgent[]>> => {
       message: response.message
     });
     
-    // Check if we got an empty array
-    if (response.success && Array.isArray(response.data) && response.data.length === 0) {
-      console.warn("API returned empty array of sales agents. Check if this is expected.");
+    // Ensure the data is processed correctly before returning
+    if (response.success) {
+      // Ensure data is always an array
+      if (!Array.isArray(response.data)) {
+        console.warn("API returned non-array data for agents. Attempting to convert.");
+        
+        // If it's a single object with agent properties, wrap in array
+        if (response.data && typeof response.data === 'object' && 'id' in response.data) {
+          response.data = [response.data];
+        }
+        // If it's an object containing an array, extract the array
+        else if (response.data && typeof response.data === 'object') {
+          const possibleArrays = Object.values(response.data).filter(value => Array.isArray(value));
+          if (possibleArrays.length > 0) {
+            response.data = possibleArrays[0];
+          } else {
+            response.data = [];
+          }
+        } else {
+          response.data = [];
+        }
+      }
+      
+      // Check if we got an empty array
+      if (Array.isArray(response.data) && response.data.length === 0) {
+        console.warn("API returned empty array of sales agents. Check if this is expected.");
+      }
     }
     
     return response;
   } catch (error) {
     console.error("Error fetching sales agents:", error);
-  
-    
-    
-    // If mock fallback is disabled, propagate the error
-    throw error;
+    // Construct error response
+    return {
+      success: false,
+      status: 0,
+      message: error instanceof Error ? error.message : "Unknown error fetching agents",
+      data: []
+    };
   }
 };
 
@@ -291,7 +318,18 @@ export const getAgents = async (): Promise<ApiResponse<SalesAgent[]>> => {
  */
 export const getAgentById = async (id: number): Promise<ApiResponse<SalesAgent>> => {
   console.log(`Fetching sales agent with ID ${id}`);
-  return apiRequest<SalesAgent>(`/sales-agents/${id}/`);
+  try {
+    const response = await apiRequest<SalesAgent>(`/sales-agents/${id}/`);
+    return response;
+  } catch (error) {
+    console.error(`Error fetching agent ID ${id}:`, error);
+    return {
+      success: false,
+      status: 0,
+      message: error instanceof Error ? error.message : "Unknown error fetching agent by ID",
+      data: null
+    };
+  }
 };
 
 /**
@@ -300,7 +338,40 @@ export const getAgentById = async (id: number): Promise<ApiResponse<SalesAgent>>
  */
 export const getAgentsByBranch = async (branchId: number): Promise<ApiResponse<SalesAgent[]>> => {
   console.log(`Fetching sales agents for branch ${branchId}`);
-  return apiRequest<SalesAgent[]>(`/sales-agents/?branch=${branchId}`);
+  try {
+    const response = await apiRequest<SalesAgent[]>(`/sales-agents/?branch=${branchId}`);
+    
+    // Ensure data is always an array
+    if (response.success && !Array.isArray(response.data)) {
+      console.warn("Branch API returned non-array data for agents. Attempting to convert.");
+      
+      // If it's a single object with agent properties, wrap in array
+      if (response.data && typeof response.data === 'object' && 'id' in response.data) {
+        response.data = [response.data];
+      }
+      // If it's an object containing an array, extract the array
+      else if (response.data && typeof response.data === 'object') {
+        const possibleArrays = Object.values(response.data).filter(value => Array.isArray(value));
+        if (possibleArrays.length > 0) {
+          response.data = possibleArrays[0];
+        } else {
+          response.data = [];
+        }
+      } else {
+        response.data = [];
+      }
+    }
+    
+    return response;
+  } catch (error) {
+    console.error(`Error fetching agents for branch ${branchId}:`, error);
+    return {
+      success: false,
+      status: 0,
+      message: error instanceof Error ? error.message : "Unknown error fetching branch agents",
+      data: []
+    };
+  }
 };
 
 // ======== AGENT REPORTS API ========

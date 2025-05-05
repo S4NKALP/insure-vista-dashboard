@@ -16,7 +16,7 @@ export const ENDPOINTS = {
   BRANCHES: '/branches/',
   
   // Agent Management
-  AGENTS: '/agents/',
+  AGENTS: '/sales-agents/',
   AGENT_APPLICATIONS: '/agent-applications/',
   AGENT_REPORTS: '/agent-reports/',
   
