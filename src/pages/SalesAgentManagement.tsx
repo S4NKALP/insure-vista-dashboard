@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +15,8 @@ import { AgentApplicationList } from '@/components/agent/AgentApplicationList';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { getAgents } from '@/api/endpoints';
+import { SalesAgent, AgentReport } from '@/types';
 
 // Define interface based on data.json sales_agents
 interface SalesAgent {
@@ -63,31 +65,34 @@ const SalesAgentManagement: React.FC = () => {
   const [editingAgent, setEditingAgent] = useState<SalesAgent | null>(null);
   const [commissionRate, setCommissionRate] = useState('');
   const [isActive, setIsActive] = useState(true);
+  const [agents, setAgents] = useState<SalesAgent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   const issuperadmin = user?.role === 'superadmin';
   const isBranchAdmin = user?.role === 'branch';
   const branchId = user?.role === 'branch' ? Number(user?.branch) : undefined;
   
-  // Mock data based on data.json
-  const agents: SalesAgent[] = [
-    {
-      id: 1,
-      branch_name: "Kohalpur Branch",
-      agent_name: "Nur Pratap Karki",
-      agent_code: "A-1-0006",
-      is_active: true,
-      joining_date: "2025-04-29",
-      commission_rate: "25.00",
-      total_policies_sold: 2,
-      total_premium_collected: "855625.00",
-      last_policy_date: "2025-04-30",
-      termination_date: null,
-      termination_reason: null,
-      status: "ACTIVE",
-      branch: 1,
-      application: 6
-    }
-  ];
+  useEffect(() => {
+    const fetchAgents = async () => {
+      try {
+        setLoading(true);
+        const response = await getAgents();
+        if (response.success && response.data) {
+          setAgents(response.data);
+        } else {
+          setError(response.message || 'Failed to fetch agents');
+        }
+      } catch (err) {
+        setError('An error occurred while fetching agents');
+        console.error('Error fetching agents:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAgents();
+  }, []);
   
   const agentReports: AgentReport[] = [
     {

@@ -16,7 +16,6 @@ import PolicyHolderManagement from "./pages/PolicyHolderManagement";
 import Reports from "./pages/Reports";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
-import AgentManagement from "./pages/AgentManagement";
 import ClaimManagement from "./pages/ClaimManagement";
 import PaymentManagement from "./pages/PaymentManagement";
 import LoanManagement from "./pages/LoanManagement";
