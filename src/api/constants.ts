@@ -103,7 +103,7 @@ export const API_ENDPOINTS = {
     DETAIL: (id: number) => `/sales-agents/${id}/`,
     CREATE: '/sales-agents/',
     UPDATE: (id: number) => `/sales-agents/${id}/`,
-    DELETE: (id: number) => `/salles-agents/${id}/`,
+    DELETE: (id: number) => `/sales-agents/${id}/`,
   },
   
   // Agent Applications
