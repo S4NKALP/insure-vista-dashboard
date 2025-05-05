@@ -16,26 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { getAgents } from '@/api/endpoints';
-import { SalesAgent, AgentReport } from '@/types';
-
-// Define interface based on data.json sales_agents
-interface SalesAgent {
-  id: number;
-  branch_name: string;
-  agent_name: string;
-  agent_code: string;
-  is_active: boolean;
-  joining_date: string;
-  commission_rate: string;
-  total_policies_sold: number;
-  total_premium_collected: string;
-  last_policy_date: string;
-  termination_date: string | null;
-  termination_reason: string | null;
-  status: string;
-  branch: number;
-  application: number;
-}
+import { SalesAgent } from '@/types';
 
 // Define interface based on data.json agent_reports
 interface AgentReport {
