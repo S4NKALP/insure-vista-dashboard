@@ -104,9 +104,10 @@ export default function PolicyManagement() {
                   <PolicyList 
                       searchTerm={searchTerm}
                       onView={handleViewPolicy}
-                      onEdit={hasPermission('manage_policies') ? handleEditPolicy : null} policies={[]} onRefresh={function (): void {
-                        throw new Error('Function not implemented.');
-                      } } loading={false}                  />
+                      onEdit={hasPermission('manage_policies') ? handleEditPolicy : null}
+                      onRefresh={() => {}} 
+                      loading={false}
+                  />
                 )}
               </CardContent>
             </Card>

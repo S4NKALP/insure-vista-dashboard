@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -19,12 +19,12 @@ import {
   KeyboardArrowUp as ExpandLessIcon,
 } from '@mui/icons-material';
 import { GSVRate, Policy, SSVConfig } from '@/types';
+import { getPolicies } from '@/api/mock/api';
 
 // Updated types based on the actual API response
 
 
 interface PolicyListProps {
-  policies: Policy[];
   onEdit: (policy: Policy) => void;
   onRefresh: () => void;
   loading: boolean;
@@ -33,7 +33,6 @@ interface PolicyListProps {
 }
 
 export const PolicyList: React.FC<PolicyListProps> = ({ 
-  policies, 
   onEdit, 
   onRefresh, 
   loading, 
@@ -41,18 +40,43 @@ export const PolicyList: React.FC<PolicyListProps> = ({
   onView 
 }) => {
   const [expandedPolicy, setExpandedPolicy] = useState<number | null>(null);
+  const [policies, setPolicies] = useState<Policy[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPolicies = async () => {
+      try {
+        const response = await getPolicies();
+        if (response.success && response.data) {
+          setPolicies(response.data);
+        }
+      } catch (error) {
+        console.error('Error fetching policies:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPolicies();
+  }, []);
 
   const handleExpandClick = (policyId: number) => {
     setExpandedPolicy(expandedPolicy === policyId ? null : policyId);
   };
 
-  if (loading) {
+  if (loading || isLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
         <CircularProgress />
       </Box>
     );
   }
+
+  // Filter policies based on search term
+  const filteredPolicies = policies.filter(policy => 
+    policy.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    policy.policy_code.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <TableContainer component={Paper}>
@@ -69,7 +93,7 @@ export const PolicyList: React.FC<PolicyListProps> = ({
           </TableRow>
         </TableHead>
         <TableBody>
-          {policies.map((policy) => (
+          {filteredPolicies.map((policy) => (
             <React.Fragment key={policy.id}>
               <TableRow>
                 <TableCell>

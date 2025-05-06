@@ -1,6 +1,4 @@
-
-import React, { useState } from 'react';
-import { sampleData } from '@/utils/data';
+import React, { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -20,14 +18,15 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
+import { getPolicies, getGSVRates, addGSVRate, updateGSVRate } from '@/api/mock/api';
+import { Policy, GSVRate } from '@/types';
 
 export const GsvRates = () => {
   const [isAdding, setIsAdding] = useState(false);
   const [isEditing, setIsEditing] = useState<number | null>(null);
-  
-  // Get GSV rates and policies from the sample data
-  const gsvRates = sampleData.gsv_rates || [];
-  const policies = sampleData.insurance_policies || [];
+  const [policies, setPolicies] = useState<Policy[]>([]);
+  const [gsvRates, setGsvRates] = useState<GSVRate[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Form state for adding/editing
   const [formData, setFormData] = useState({
@@ -36,6 +35,31 @@ export const GsvRates = () => {
     rate: '',
     policy: ''
   });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [policiesResponse, gsvRatesResponse] = await Promise.all([
+          getPolicies(),
+          getGSVRates(0, {} as GSVRate) // You might need to adjust this based on your API
+        ]);
+
+        if (policiesResponse.success && policiesResponse.data) {
+          setPolicies(policiesResponse.data);
+        }
+
+        if (gsvRatesResponse.success && gsvRatesResponse.data) {
+          setGsvRates(Array.isArray(gsvRatesResponse.data) ? gsvRatesResponse.data : [gsvRatesResponse.data]);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
   
   const handleAddClick = () => {
     setIsAdding(true);
@@ -48,23 +72,46 @@ export const GsvRates = () => {
     });
   };
   
-  const handleEditClick = (rate: any) => {
+  const handleEditClick = (rate: GSVRate) => {
     setIsEditing(rate.id);
     setIsAdding(false);
     setFormData({
       min_year: rate.min_year.toString(),
       max_year: rate.max_year.toString(),
-      rate: rate.rate,
+      rate: rate.rate.toString(),
       policy: rate.policy.toString()
     });
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Submitting data:', formData);
-    // Here you would save the data
-    setIsAdding(false);
-    setIsEditing(null);
+    try {
+      const gsvRateData = {
+        min_year: parseInt(formData.min_year),
+        max_year: parseInt(formData.max_year),
+        rate: formData.rate,
+        policy: parseInt(formData.policy)
+      };
+
+      let response;
+      if (isEditing) {
+        response = await updateGSVRate(isEditing, gsvRateData);
+      } else {
+        response = await addGSVRate(parseInt(formData.policy), gsvRateData);
+      }
+
+      if (response.success) {
+        // Refresh the GSV rates list
+        const gsvRatesResponse = await getGSVRates(0, {} as GSVRate);
+        if (gsvRatesResponse.success && gsvRatesResponse.data) {
+          setGsvRates(Array.isArray(gsvRatesResponse.data) ? gsvRatesResponse.data : [gsvRatesResponse.data]);
+        }
+        setIsAdding(false);
+        setIsEditing(null);
+      }
+    } catch (error) {
+      console.error('Error saving GSV rate:', error);
+    }
   };
   
   const handleCancel = () => {
@@ -77,6 +124,10 @@ export const GsvRates = () => {
     const policy = policies.find(p => p.id === policyId);
     return policy ? policy.name : 'Unknown Policy';
   };
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="space-y-6">

@@ -1,6 +1,4 @@
-
-import React, { useState } from 'react';
-import { sampleData } from '@/utils/data';
+import React, { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -20,13 +18,14 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
+import { getPolicies, getSSVConfig, addSSVConfig } from '@/api/mock/api';
+import { Policy, SSVConfig } from '@/types';
 
 export const SsvConfig = () => {
   const [isAdding, setIsAdding] = useState(false);
-  
-  // Get SSV configs and policies from the sample data
-  const ssvConfigs = sampleData.ssv_configs || [];
-  const policies = sampleData.insurance_policies || [];
+  const [policies, setPolicies] = useState<Policy[]>([]);
+  const [ssvConfigs, setSsvConfigs] = useState<SSVConfig[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Form state for adding
   const [formData, setFormData] = useState({
@@ -36,6 +35,31 @@ export const SsvConfig = () => {
     eligibility_years: '',
     policy: ''
   });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [policiesResponse, ssvConfigsResponse] = await Promise.all([
+          getPolicies(),
+          getSSVConfig(0, {} as SSVConfig) // You might need to adjust this based on your API
+        ]);
+
+        if (policiesResponse.success && policiesResponse.data) {
+          setPolicies(policiesResponse.data);
+        }
+
+        if (ssvConfigsResponse.success && ssvConfigsResponse.data) {
+          setSsvConfigs(Array.isArray(ssvConfigsResponse.data) ? ssvConfigsResponse.data : [ssvConfigsResponse.data]);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
   
   const handleAddClick = () => {
     setIsAdding(true);
@@ -48,11 +72,29 @@ export const SsvConfig = () => {
     });
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Submitting data:', formData);
-    // Here you would save the data
-    setIsAdding(false);
+    try {
+      const ssvConfigData = {
+        min_year: parseInt(formData.min_year),
+        max_year: parseInt(formData.max_year),
+        ssv_factor: formData.factor,
+        eligibility_years: formData.eligibility_years
+      };
+
+      const response = await addSSVConfig(parseInt(formData.policy), ssvConfigData);
+
+      if (response.success) {
+        // Refresh the SSV configs list
+        const ssvConfigsResponse = await getSSVConfig(0, {} as SSVConfig);
+        if (ssvConfigsResponse.success && ssvConfigsResponse.data) {
+          setSsvConfigs(Array.isArray(ssvConfigsResponse.data) ? ssvConfigsResponse.data : [ssvConfigsResponse.data]);
+        }
+        setIsAdding(false);
+      }
+    } catch (error) {
+      console.error('Error saving SSV config:', error);
+    }
   };
   
   const handleCancel = () => {
@@ -64,6 +106,10 @@ export const SsvConfig = () => {
     const policy = policies.find(p => p.id === policyId);
     return policy ? policy.name : 'Unknown Policy';
   };
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -182,11 +228,11 @@ export const SsvConfig = () => {
               </TableCell>
             </TableRow>
           ) : (
-            ssvConfigs.map((config, index) => (
-              <TableRow key={index}>
+            ssvConfigs.map((config) => (
+              <TableRow key={config.id}>
                 <TableCell>{getPolicyName(config.policy)}</TableCell>
                 <TableCell>Year {config.min_year} - {config.max_year}</TableCell>
-                <TableCell>{config.factor}</TableCell>
+                <TableCell>{config.ssv_factor}</TableCell>
                 <TableCell>{config.eligibility_years} years</TableCell>
               </TableRow>
             ))
