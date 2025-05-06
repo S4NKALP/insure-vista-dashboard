@@ -6,66 +6,7 @@ import { AddPolicyHolderDialog } from '@/components/policyholder/AddPolicyHolder
 import { useAuth } from '@/hooks/useAuth';
 import { Input } from '@/components/ui/input';
 import { Search, ArrowLeft } from 'lucide-react';
-
-interface PolicyHolder {
-  id: number;
-  policy_number: string;
-  sum_assured: string;
-  duration_years: number;
-  date_of_birth: string;
-  age: number;
-  include_adb: boolean;
-  include_ptd: boolean;
-  nominee_name: string;
-  payment_interval: string;
-  risk_category: string;
-  status: string;
-  payment_status: string;
-  start_date: string;
-  maturity_date: string;
-  customer: {
-    id: number;
-    first_name: string;
-    last_name: string;
-    email: string;
-    phone_number: string;
-    address: string;
-    gender: string;
-  };
-  branch: {
-    id: number;
-    name: string;
-    branch_code: number;
-  };
-  policy: {
-    id: number;
-    name: string;
-    policy_code: string;
-    policy_type: string;
-  };
-  agent: {
-    id: number;
-    agent_code: string;
-  };
-  kyc?: {
-    id: number;
-    document_type: string;
-    document_number: string;
-    document_front: string;
-    document_back: string;
-    pan_number: string | null;
-    pan_front: string | null;
-    pan_back: string | null;
-    pp_photo: string;
-    province: string;
-    district: string;
-    municipality: string;
-    ward: string;
-    nearest_hospital: string;
-    natural_hazard_exposure: string;
-    status: string;
-  };
-}
+import { PolicyHolder } from '@/types';
 
 export default function PolicyHolderManagement() {
   const { user } = useAuth();
@@ -132,7 +73,7 @@ export default function PolicyHolderManagement() {
               </button>
               
               <h1 className="text-3xl font-bold">
-                {selectedPolicyHolder.customer.first_name} {selectedPolicyHolder.customer.last_name}
+                {selectedPolicyHolder.customer_name}
               </h1>
               <p className="text-muted-foreground">
                 Policy Number: {selectedPolicyHolder.policy_number}
