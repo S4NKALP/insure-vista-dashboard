@@ -580,9 +580,12 @@ export const deletePolicy = async (id: number): Promise<ApiResponse<boolean>> =>
 };
 
 // GSV Rates API Functions
+export const getGSVRates = async (policyId: number): Promise<ApiResponse<GSVRate[]>> => {
+  return apiRequest<GSVRate[]>(`/gsv-rates/?policy=${policyId}`);
+};
 
-export const addGSVRate = async (policyId: number, gsvRate: Omit<GSVRate, 'id' | 'policy'>): Promise<ApiResponse<GSVRate>> => {
-  return apiRequest<GSVRate>(`/insurance-policies/${policyId}/gsv-rates/`, {
+export const addGSVRate = async (policyId: number, gsvRate: { min_year: number; max_year: number; rate: string }): Promise<ApiResponse<GSVRate>> => {
+  return apiRequest<GSVRate>(`/gsv-rates/`, {
     method: 'POST',
     body: JSON.stringify({
       ...gsvRate,
@@ -590,16 +593,8 @@ export const addGSVRate = async (policyId: number, gsvRate: Omit<GSVRate, 'id' |
     })
   });
 };
-export const getGSVRates = async (policyId: number, gsvRate: Omit<GSVRate, 'id'>): Promise<ApiResponse<GSVRate>> => {
-  return apiRequest<GSVRate>(`/gsv-rates`, {
-    method: 'GET',
-    body: JSON.stringify({
-      ...gsvRate,
-      policy: policyId
-    })
-  });
-};
-export const updateGSVRate = async (gsvRateId: number, gsvRate: Partial<GSVRate>): Promise<ApiResponse<GSVRate>> => {
+
+export const updateGSVRate = async (gsvRateId: number, gsvRate: { min_year: number; max_year: number; rate: string }): Promise<ApiResponse<GSVRate>> => {
   return apiRequest<GSVRate>(`/gsv-rates/${gsvRateId}/`, {
     method: 'PATCH',
     body: JSON.stringify(gsvRate)
@@ -617,8 +612,18 @@ export const deleteGSVRate = async (gsvRateId: number): Promise<ApiResponse<bool
 };
 
 // SSV Config API Functions
-export const addSSVConfig = async (policyId: number, ssvConfig: Omit<SSVConfig, 'id' | 'policy'>): Promise<ApiResponse<SSVConfig>> => {
-  return apiRequest<SSVConfig>(`/insurance-policies/${policyId}/ssv-configs/`, {
+export const getSSVConfigs = async (policyId: number): Promise<ApiResponse<SSVConfig[]>> => {
+  return apiRequest<SSVConfig[]>(`/ssv-configs/?policy=${policyId}`);
+};
+
+export const addSSVConfig = async (policyId: number, ssvConfig: {
+  min_year: number;
+  max_year: number;
+  ssv_factor: string;
+  eligibility_years: number;
+  custom_condition: string;
+}): Promise<ApiResponse<SSVConfig>> => {
+  return apiRequest<SSVConfig>(`/ssv-configs/`, {
     method: 'POST',
     body: JSON.stringify({
       ...ssvConfig,
@@ -626,16 +631,14 @@ export const addSSVConfig = async (policyId: number, ssvConfig: Omit<SSVConfig, 
     })
   });
 };
-export const getSSVConfig = async (policyId: number, ssvConfig: Omit<SSVConfig, 'id'>): Promise<ApiResponse<SSVConfig>> => {
-  return apiRequest<SSVConfig>(`/insurance-policies/${policyId}/ssv-configs/`, {
-    method: 'GET',
-    body: JSON.stringify({
-      ...ssvConfig,
-      policy: policyId
-    })
-  });
-};
-export const updateSSVConfig = async (ssvConfigId: number, ssvConfig: Partial<SSVConfig>): Promise<ApiResponse<SSVConfig>> => {
+
+export const updateSSVConfig = async (ssvConfigId: number, ssvConfig: {
+  min_year: number;
+  max_year: number;
+  ssv_factor: string;
+  eligibility_years: number;
+  custom_condition: string;
+}): Promise<ApiResponse<SSVConfig>> => {
   return apiRequest<SSVConfig>(`/ssv-configs/${ssvConfigId}/`, {
     method: 'PATCH',
     body: JSON.stringify(ssvConfig)
