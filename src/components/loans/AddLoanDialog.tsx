@@ -3,6 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { toast } from 'sonner';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Dialog,
   DialogContent,
@@ -26,6 +27,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { addLoan } from '@/api/mock/api';
 
 interface AddLoanDialogProps {
   open: boolean;
@@ -33,42 +35,72 @@ interface AddLoanDialogProps {
 }
 
 const formSchema = z.object({
-  policy_holder: z.string().min(1, { message: 'Policy holder is required' }),
+  policy_holder_number: z.string().min(1, { message: 'Policy holder number is required' }),
+  customer_name: z.string().min(1, { message: 'Customer name is required' }),
   loan_amount: z.string()
     .min(1, { message: 'Loan amount is required' })
     .refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
-      message: 'Amount must be a positive number'
+      message: 'Loan amount must be a positive number'
     }),
   interest_rate: z.string()
     .min(1, { message: 'Interest rate is required' })
     .refine((val) => !isNaN(Number(val)) && Number(val) >= 0 && Number(val) <= 100, {
       message: 'Interest rate must be between 0 and 100'
     }),
-  reason: z.string().min(10, { message: 'Reason must be at least 10 characters long' }),
+  loan_status: z.string().min(1, { message: 'Loan status is required' }),
 });
 
-export const AddLoanDialog: React.FC<AddLoanDialogProps> = ({ open, onOpenChange }) => {
+export const AddLoanDialog: React.FC<AddLoanDialogProps> = ({ 
+  open, 
+  onOpenChange,
+}) => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      policy_holder: '',
+      policy_holder_number: '',
+      customer_name: '',
       loan_amount: '',
       interest_rate: '',
-      reason: '',
+      loan_status: '',
     },
   });
 
+  const addLoanMutation = useMutation({
+    mutationFn: async (values: z.infer<typeof formSchema>) => {
+      const response = await addLoan({
+        ...values,
+        remaining_balance: values.loan_amount,
+        accrued_interest: '0',
+        last_interest_date: new Date().toISOString().split('T')[0],
+        policy_holder: 0, // This will be set by the backend
+      });
+      
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to add loan');
+      }
+      
+      return response.data;
+    },
+    onSuccess: () => {
+      // Invalidate and refetch loans
+      queryClient.invalidateQueries({ queryKey: ['loans'] });
+      
+      // Show success message
+      toast.success('Loan added successfully');
+      
+      // Close the dialog and reset the form
+      onOpenChange(false);
+      form.reset();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to add loan');
+    }
+  });
+
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    // In a real app, this would make an API call
-    console.log('Submitting loan request:', values);
-    
-    // Show success message
-    toast.success('Loan request submitted successfully');
-    
-    // Close the dialog and reset the form
-    onOpenChange(false);
-    form.reset();
+    addLoanMutation.mutate(values);
   };
 
   const calculateMonthlyPayment = () => {
@@ -85,35 +117,38 @@ export const AddLoanDialog: React.FC<AddLoanDialogProps> = ({ open, onOpenChange
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>New Loan Application</DialogTitle>
+          <DialogTitle>Add New Loan</DialogTitle>
           <DialogDescription>
-            Fill in the details to apply for a new loan. All fields marked with * are required.
+            Enter the details for the new loan
           </DialogDescription>
         </DialogHeader>
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
               <FormField
                 control={form.control}
-                name="policy_holder"
+                name="policy_holder_number"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Policy Holder *</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a policy holder" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="1">Nur Pratap Karki (1751451440001)</SelectItem>
-                        <SelectItem value="2">Sumitra Bam (1751451440002)</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Policy Holder Number *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter policy holder number" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="customer_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Customer Name *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter customer name" {...field} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -124,9 +159,13 @@ export const AddLoanDialog: React.FC<AddLoanDialogProps> = ({ open, onOpenChange
                 name="loan_amount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Loan Amount (Rs.) *</FormLabel>
+                    <FormLabel>Loan Amount *</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="Enter amount" {...field} />
+                      <Input 
+                        type="number" 
+                        placeholder="Enter loan amount" 
+                        {...field} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -140,31 +179,43 @@ export const AddLoanDialog: React.FC<AddLoanDialogProps> = ({ open, onOpenChange
                   <FormItem>
                     <FormLabel>Interest Rate (%) *</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.1" placeholder="Enter interest rate" {...field} />
+                      <Input 
+                        type="number" 
+                        placeholder="Enter interest rate" 
+                        {...field} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            </div>
 
-            <FormField
-              control={form.control}
-              name="reason"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Reason for Loan *</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Explain why you need this loan" 
-                      className="min-h-[100px]"
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="loan_status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Loan Status *</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select loan status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Active">Active</SelectItem>
+                        <SelectItem value="Paid">Paid</SelectItem>
+                        <SelectItem value="Defaulted">Defaulted</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <Card>
               <CardContent className="pt-6">
@@ -189,10 +240,20 @@ export const AddLoanDialog: React.FC<AddLoanDialogProps> = ({ open, onOpenChange
             </Card>
 
             <DialogFooter>
-              <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
+              <Button 
+                variant="outline" 
+                type="button" 
+                onClick={() => onOpenChange(false)}
+                disabled={addLoanMutation.isPending}
+              >
                 Cancel
               </Button>
-              <Button type="submit">Submit Application</Button>
+              <Button 
+                type="submit"
+                disabled={addLoanMutation.isPending}
+              >
+                {addLoanMutation.isPending ? 'Adding...' : 'Add Loan'}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

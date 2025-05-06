@@ -1,4 +1,4 @@
-import { ApiResponse, Branch, PolicyHolder, SalesAgent, AgentReport, Customer, User, Company, Policy, GSVRate, SSVConfig } from '@/types';
+import { ApiResponse, Branch, PolicyHolder, SalesAgent, AgentReport, Customer, User, Company, Policy, GSVRate, SSVConfig, Loan, LoanRepayment } from '@/types';
 import { AgentApplication } from '@/types';
 import { API_URL, ENDPOINTS, API_TIMEOUT, API_ENDPOINTS } from '@/api/constants';
 
@@ -689,12 +689,51 @@ export const getClaimProcessing = async (): Promise<ApiResponse<any[]>> => {
 };
 
 // ======== LOANS API ========
-export const getLoans = async (): Promise<ApiResponse<any[]>> => {
-  return apiRequest<any[]>(`/loans/`);
+export const getLoans = async (): Promise<ApiResponse<Loan[]>> => {
+  return apiRequest<Loan[]>(`/loans/`);
 };
 
-export const getLoanRepayments = async (): Promise<ApiResponse<any[]>> => {
-  return apiRequest<any[]>(`/loan-repayments/`);
+export const getLoanById = async (id: number): Promise<ApiResponse<Loan>> => {
+  return apiRequest<Loan>(`/loans/${id}/`);
+};
+
+export const addLoan = async (loan: Omit<Loan, 'id' | 'created_at' | 'updated_at'>): Promise<ApiResponse<Loan>> => {
+  return apiRequest<Loan>(`/loans/`, {
+    method: 'POST',
+    body: JSON.stringify(loan)
+  });
+};
+
+export const updateLoan = async (id: number, loan: Partial<Loan>): Promise<ApiResponse<Loan>> => {
+  return apiRequest<Loan>(`/loans/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(loan)
+  });
+};
+
+export const deleteLoan = async (id: number): Promise<ApiResponse<boolean>> => {
+  const response = await apiRequest<any>(`/loans/${id}/`, {
+    method: 'DELETE'
+  });
+  return {
+    ...response,
+    data: response.success
+  };
+};
+
+export const getLoanRepayments = async (): Promise<ApiResponse<LoanRepayment[]>> => {
+  return apiRequest<LoanRepayment[]>(`/loan-repayments/`);
+};
+
+export const getLoanRepaymentById = async (id: number): Promise<ApiResponse<LoanRepayment>> => {
+  return apiRequest<LoanRepayment>(`/loan-repayments/${id}/`);
+};
+
+export const addLoanRepayment = async (repayment: Omit<LoanRepayment, 'id'>): Promise<ApiResponse<LoanRepayment>> => {
+  return apiRequest<LoanRepayment>(`/loan-repayments/`, {
+    method: 'POST',
+    body: JSON.stringify(repayment)
+  });
 };
 
 // ======== DASHBOARD STATISTICS API ========

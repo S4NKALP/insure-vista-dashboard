@@ -15,53 +15,22 @@ import { LoanDetailsDialog } from './LoanDetailsDialog';
 import { AddRepaymentDialog } from './AddRepaymentDialog';
 import { Eye, CheckCircle, XCircle, Clock, MoreHorizontal } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-
-interface Loan {
-  id: number;
-  policy_holder_number: string;
-  customer_name: string;
-  loan_amount: string;
-  remaining_balance: string;
-  interest_rate: string;
-  loan_status: string;
-  created_at: string;
-  updated_at: string;
-  accrued_interest: string;
-  last_interest_date: string;
-  policy_holder: number;
-}
+import { Loan } from '@/types';
 
 interface LoansListProps {
   status: 'pending' | 'approved' | 'rejected' | 'completed';
   canEdit: boolean;
   onRepayment?: (loan: Loan) => void;
+  loans: Loan[];
 }
 
-export const LoansList: React.FC<LoansListProps> = ({ status, canEdit, onRepayment }) => {
+export const LoansList: React.FC<LoansListProps> = ({ status, canEdit, onRepayment, loans }) => {
   const { user } = useAuth();
   const userBranch = user?.branchName || '';
 
   const [selectedLoan, setSelectedLoan] = React.useState<Loan | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = React.useState(false);
   const [repaymentDialogOpen, setRepaymentDialogOpen] = React.useState(false);
-
-  // Mock data based on data.json format
-  const loans: Loan[] = [
-    {
-      id: 1,
-      policy_holder_number: "1751451440002",
-      customer_name: "Sumitra Bam",
-      loan_amount: "25000.00",
-      remaining_balance: "13000.00",
-      interest_rate: "7.00",
-      loan_status: "Active",
-      created_at: "2025-04-30",
-      updated_at: "2025-04-30",
-      accrued_interest: "0.00",
-      last_interest_date: "2025-04-30",
-      policy_holder: 2
-    }
-  ];
 
   const handleViewDetails = (loan: Loan) => {
     setSelectedLoan(loan);
@@ -74,15 +43,15 @@ export const LoansList: React.FC<LoansListProps> = ({ status, canEdit, onRepayme
   };
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case 'pending':
         return <Badge variant="outline" className="bg-yellow-100">Pending</Badge>;
-      case 'approved':
-        return <Badge variant="outline" className="bg-green-100">Approved</Badge>;
+      case 'active':
+        return <Badge variant="outline" className="bg-green-100">Active</Badge>;
       case 'rejected':
         return <Badge variant="outline" className="bg-red-100">Rejected</Badge>;
-      case 'completed':
-        return <Badge variant="outline" className="bg-blue-100">Completed</Badge>;
+      case 'paid':
+        return <Badge variant="outline" className="bg-blue-100">Paid</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -94,7 +63,7 @@ export const LoansList: React.FC<LoansListProps> = ({ status, canEdit, onRepayme
         return 'default';
       case 'pending':
         return 'secondary';
-      case 'completed':
+      case 'paid':
         return 'default';
       case 'rejected':
         return 'destructive';
@@ -102,6 +71,14 @@ export const LoansList: React.FC<LoansListProps> = ({ status, canEdit, onRepayme
         return 'default';
     }
   };
+
+  if (loans.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        No loans found in this category
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-md border">
@@ -137,15 +114,43 @@ export const LoansList: React.FC<LoansListProps> = ({ status, canEdit, onRepayme
               </TableCell>
               <TableCell>{loan.created_at}</TableCell>
               <TableCell className="text-right">
-                {canEdit && loan.loan_status === 'Active' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onRepayment?.(loan)}
-                  >
-                    Record Payment
-                  </Button>
-                )}
+                <div className="flex justify-end gap-2">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleViewDetails(loan)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>View Details</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  
+                  {canEdit && loan.loan_status === 'Active' && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onRepayment?.(loan)}
+                          >
+                            Record Payment
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Record Loan Payment</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
               </TableCell>
             </TableRow>
           ))}
