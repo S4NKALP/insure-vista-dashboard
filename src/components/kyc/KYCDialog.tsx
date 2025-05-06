@@ -81,24 +81,63 @@ export const KYCDialog: React.FC<KYCDialogProps> = ({
 }) => {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      document_type: kycData?.document_type || "",
-      document_number: kycData?.document_number || "",
-      document_front: kycData?.document_front || "",
-      document_back: kycData?.document_back || "",
-      pan_number: kycData?.pan_number || "",
-      pan_front: kycData?.pan_front || "",
-      pan_back: kycData?.pan_back || "",
-      pp_photo: kycData?.pp_photo || "",
-      province: kycData?.province || "",
-      district: kycData?.district || "",
-      municipality: kycData?.municipality || "",
-      ward: kycData?.ward || "",
-      nearest_hospital: kycData?.nearest_hospital || "",
-      natural_hazard_exposure: kycData?.natural_hazard_exposure || "",
-      status: kycData?.status || "Pending",
+    defaultValues: mode === 'edit' && kycData ? {
+      document_type: kycData.document_type,
+      document_number: kycData.document_number,
+      document_front: kycData.document_front,
+      document_back: kycData.document_back,
+      pan_number: kycData.pan_number || "",
+      pan_front: kycData.pan_front || "",
+      pan_back: kycData.pan_back || "",
+      pp_photo: kycData.pp_photo,
+      province: kycData.province,
+      district: kycData.district,
+      municipality: kycData.municipality,
+      ward: kycData.ward,
+      nearest_hospital: kycData.nearest_hospital,
+      natural_hazard_exposure: kycData.natural_hazard_exposure,
+      status: kycData.status,
+    } : {
+      document_type: "",
+      document_number: "",
+      document_front: "",
+      document_back: "",
+      pan_number: "",
+      pan_front: "",
+      pan_back: "",
+      pp_photo: "",
+      province: "",
+      district: "",
+      municipality: "",
+      ward: "",
+      nearest_hospital: "",
+      natural_hazard_exposure: "low",
+      status: "Pending",
     },
   });
+
+  // Reset form when dialog opens/closes or kycData changes
+  React.useEffect(() => {
+    if (open && mode === 'edit' && kycData) {
+      form.reset({
+        document_type: kycData.document_type,
+        document_number: kycData.document_number,
+        document_front: kycData.document_front,
+        document_back: kycData.document_back,
+        pan_number: kycData.pan_number || "",
+        pan_front: kycData.pan_front || "",
+        pan_back: kycData.pan_back || "",
+        pp_photo: kycData.pp_photo,
+        province: kycData.province,
+        district: kycData.district,
+        municipality: kycData.municipality,
+        ward: kycData.ward,
+        nearest_hospital: kycData.nearest_hospital,
+        natural_hazard_exposure: kycData.natural_hazard_exposure,
+        status: kycData.status,
+      });
+    }
+  }, [open, mode, kycData, form]);
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     console.log(values);

@@ -9,59 +9,9 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-
-interface PolicyHolder {
-  id: number;
-  policy_number: string;
-  sum_assured: string;
-  duration_years: number;
-  status: string;
-  payment_status: string;
-  start_date: string;
-  maturity_date: string;
-  customer: {
-    id: number;
-    first_name: string;
-    last_name: string;
-    email: string;
-    phone_number: string;
-    address: string;
-    gender: string;
-  };
-  branch: {
-    id: number;
-    name: string;
-    branch_code: number;
-  };
-  policy: {
-    id: number;
-    name: string;
-    policy_code: string;
-    policy_type: string;
-  };
-  agent: {
-    id: number;
-    agent_code: string;
-  };
-  kyc?: {
-    id: number;
-    document_type: string;
-    document_number: string;
-    document_front: string;
-    document_back: string;
-    pan_number: string | null;
-    pan_front: string | null;
-    pan_back: string | null;
-    pp_photo: string;
-    province: string;
-    district: string;
-    municipality: string;
-    ward: string;
-    nearest_hospital: string;
-    natural_hazard_exposure: string;
-    status: string;
-  };
-}
+import { getPolicyHolders } from '@/api/mock/api';
+import { toast } from 'sonner';
+import { PolicyHolder, Customer } from '@/types';
 
 interface PolicyHolderListProps {
   searchTerm: string;
@@ -74,73 +24,49 @@ export const PolicyHolderList: React.FC<PolicyHolderListProps> = ({
   onSelectPolicyHolder,
   canEdit = false,
 }) => {
-  // Mock data based on data.json format
-  const policyHolders: PolicyHolder[] = [
-    {
-      id: 1,
-      policy_number: "1751451440001",
-      sum_assured: "5000000.00",
-      duration_years: 10,
-      status: "Active",
-      payment_status: "Partially Paid",
-      start_date: "2025-04-29",
-      maturity_date: "2035-04-29",
-      customer: {
-        id: 1,
-        first_name: "Nur Pratap",
-        last_name: "Karki",
-        email: "nurprtapkarki@gmail.com",
-        phone_number: "9840693765",
-        address: "Kohalpur, 11 Banke",
-        gender: "M"
-      },
-      branch: {
-        id: 1,
-        name: "Kohalpur Branch",
-        branch_code: 145
-      },
-      policy: {
-        id: 1,
-        name: "Saral Jiwan Beema",
-        policy_code: "144",
-        policy_type: "Endownment"
-      },
-      agent: {
-        id: 1,
-        agent_code: "A-1-0006"
-      },
-      kyc: {
-        id: 1,
-        document_type: "Citizenship",
-        document_number: "10000",
-        document_front: "http://127.0.0.1:8000/media/customer_kyc/WhatsApp_Image_2025-04-18_at_8.45.25_PM.jpeg",
-        document_back: "http://127.0.0.1:8000/media/customer_kyc/WhatsApp_Image_2025-04-18_at_8_72Tm8cT.45.25_PM.jpeg",
-        pan_number: null,
-        pan_front: null,
-        pan_back: null,
-        pp_photo: "http://127.0.0.1:8000/media/customer_kyc/WhatsApp_Image_2025-04-18_at_8_jM6Q6rt.45.25_PM.jpeg",
-        province: "Lumbini",
-        district: "Banke",
-        municipality: "Kohalpur",
-        ward: "10",
-        nearest_hospital: "Nepaljung Medical collage, Kohalpur",
-        natural_hazard_exposure: "low",
-        status: "Pending"
+  const [policyHolders, setPolicyHolders] = React.useState<PolicyHolder[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchPolicyHolders = async () => {
+      try {
+        setLoading(true);
+        const response = await getPolicyHolders();
+        if (response.success && response.data) {
+          setPolicyHolders(response.data);
+        } else {
+          toast.error(response.message || 'Failed to fetch policy holders');
+        }
+      } catch (error) {
+        toast.error('Error fetching policy holders');
+        console.error('Error fetching policy holders:', error);
+      } finally {
+        setLoading(false);
       }
-    }
-  ];
+    };
+
+    fetchPolicyHolders();
+  }, []);
 
   const filteredPolicyHolders = policyHolders.filter(holder => {
     const searchLower = searchTerm.toLowerCase();
+    const customer = holder.customer as Partial<Customer>;
     return (
       holder.policy_number.toLowerCase().includes(searchLower) ||
-      holder.customer.first_name.toLowerCase().includes(searchLower) ||
-      holder.customer.last_name.toLowerCase().includes(searchLower) ||
-      holder.customer.email.toLowerCase().includes(searchLower) ||
-      holder.customer.phone_number?.toLowerCase().includes(searchLower) ||
-      holder.policy.name.toLowerCase().includes(searchLower)
+      holder.customer_name.toLowerCase().includes(searchLower) ||
+      (customer?.email?.toLowerCase() || '').includes(searchLower) ||
+      (customer?.phone_number?.toLowerCase() || '').includes(searchLower) ||
+      holder.policy_name.toLowerCase().includes(searchLower)
     );
   });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-md border">
@@ -156,28 +82,39 @@ export const PolicyHolderList: React.FC<PolicyHolderListProps> = ({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredPolicyHolders.map((holder) => (
-            <TableRow key={holder.id}>
-              <TableCell className="font-medium">{holder.policy_number}</TableCell>
-              <TableCell>{`${holder.customer.first_name} ${holder.customer.last_name}`}</TableCell>
-              <TableCell>{holder.customer.email}</TableCell>
-              <TableCell>{holder.policy.name}</TableCell>
-              <TableCell>
-                <Badge variant={holder.status === 'Active' ? 'default' : 'secondary'}>
-                  {holder.status}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onSelectPolicyHolder(holder)}
-                >
-                  View Details
-                </Button>
+          {filteredPolicyHolders.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                No policy holders found
               </TableCell>
             </TableRow>
-          ))}
+          ) : (
+            filteredPolicyHolders.map((holder) => {
+              const customer = holder.customer as Partial<Customer>;
+              return (
+                <TableRow key={holder.id}>
+                  <TableCell className="font-medium">{holder.policy_number}</TableCell>
+                  <TableCell>{holder.customer_name}</TableCell>
+                  <TableCell>{customer?.email || '-'}</TableCell>
+                  <TableCell>{holder.policy_name}</TableCell>
+                  <TableCell>
+                    <Badge variant={holder.status === 'Active' ? 'default' : 'secondary'}>
+                      {holder.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onSelectPolicyHolder(holder)}
+                    >
+                      View Details
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })
+          )}
         </TableBody>
       </Table>
     </div>
