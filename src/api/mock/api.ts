@@ -1,6 +1,6 @@
-import { ApiResponse, Branch, PolicyHolder, SalesAgent, AgentReport, Customer, User, Company, Policy } from '@/types';
+import { ApiResponse, Branch, PolicyHolder, SalesAgent, AgentReport, Customer, User, Company, Policy, GSVRate, SSVConfig } from '@/types';
 import { AgentApplication } from '@/types';
-import { API_URL, ENDPOINTS, API_TIMEOUT } from '@/api/constants';
+import { API_URL, ENDPOINTS, API_TIMEOUT, API_ENDPOINTS } from '@/api/constants';
 
 // Config - Use the imported constants
 const apiUrl = API_URL;
@@ -545,8 +545,111 @@ export const getCompanies = async (): Promise<ApiResponse<Company[]>> => {
 };
 
 // ======== POLICY API ========
+
+// Policy API Functions
 export const getPolicies = async (): Promise<ApiResponse<Policy[]>> => {
   return apiRequest<Policy[]>(`/insurance-policies/`);
+};
+
+export const getPolicyById = async (id: number): Promise<ApiResponse<Policy>> => {
+  return apiRequest<Policy>(`/insurance-policies/${id}/`);
+};
+
+export const addPolicy = async (policy: Omit<Policy, 'id' | 'created_at' | 'gsv_rates' | 'ssv_configs'>): Promise<ApiResponse<Policy>> => {
+  return apiRequest<Policy>(`/insurance-policies/`, {
+    method: 'POST',
+    body: JSON.stringify(policy)
+  });
+};
+
+export const updatePolicy = async (id: number, policy: Partial<Policy>): Promise<ApiResponse<Policy>> => {
+  return apiRequest<Policy>(`/insurance-policies/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(policy)
+  });
+};
+
+export const deletePolicy = async (id: number): Promise<ApiResponse<boolean>> => {
+  const response = await apiRequest<any>(`/insurance-policies/${id}/`, {
+    method: 'DELETE'
+  });
+  return {
+    ...response,
+    data: response.success
+  };
+};
+
+// GSV Rates API Functions
+
+export const addGSVRate = async (policyId: number, gsvRate: Omit<GSVRate, 'id' | 'policy'>): Promise<ApiResponse<GSVRate>> => {
+  return apiRequest<GSVRate>(`/insurance-policies/${policyId}/gsv-rates/`, {
+    method: 'POST',
+    body: JSON.stringify({
+      ...gsvRate,
+      policy: policyId
+    })
+  });
+};
+export const getGSVRates = async (policyId: number, gsvRate: Omit<GSVRate, 'id'>): Promise<ApiResponse<GSVRate>> => {
+  return apiRequest<GSVRate>(`/gsv-rates`, {
+    method: 'GET',
+    body: JSON.stringify({
+      ...gsvRate,
+      policy: policyId
+    })
+  });
+};
+export const updateGSVRate = async (gsvRateId: number, gsvRate: Partial<GSVRate>): Promise<ApiResponse<GSVRate>> => {
+  return apiRequest<GSVRate>(`/gsv-rates/${gsvRateId}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(gsvRate)
+  });
+};
+
+export const deleteGSVRate = async (gsvRateId: number): Promise<ApiResponse<boolean>> => {
+  const response = await apiRequest<any>(`/gsv-rates/${gsvRateId}/`, {
+    method: 'DELETE'
+  });
+  return {
+    ...response,
+    data: response.success
+  };
+};
+
+// SSV Config API Functions
+export const addSSVConfig = async (policyId: number, ssvConfig: Omit<SSVConfig, 'id' | 'policy'>): Promise<ApiResponse<SSVConfig>> => {
+  return apiRequest<SSVConfig>(`/insurance-policies/${policyId}/ssv-configs/`, {
+    method: 'POST',
+    body: JSON.stringify({
+      ...ssvConfig,
+      policy: policyId
+    })
+  });
+};
+export const getSSVConfig = async (policyId: number, ssvConfig: Omit<SSVConfig, 'id'>): Promise<ApiResponse<SSVConfig>> => {
+  return apiRequest<SSVConfig>(`/insurance-policies/${policyId}/ssv-configs/`, {
+    method: 'GET',
+    body: JSON.stringify({
+      ...ssvConfig,
+      policy: policyId
+    })
+  });
+};
+export const updateSSVConfig = async (ssvConfigId: number, ssvConfig: Partial<SSVConfig>): Promise<ApiResponse<SSVConfig>> => {
+  return apiRequest<SSVConfig>(`/ssv-configs/${ssvConfigId}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(ssvConfig)
+  });
+};
+
+export const deleteSSVConfig = async (ssvConfigId: number): Promise<ApiResponse<boolean>> => {
+  const response = await apiRequest<any>(`/ssv-configs/${ssvConfigId}/`, {
+    method: 'DELETE'
+  });
+  return {
+    ...response,
+    data: response.success
+  };
 };
 
 // ======== PREMIUM PAYMENTS API ========
@@ -893,4 +996,33 @@ export const updateAgentApplicationStatus = async (
             throw secondError;
         }
     }
+};
+
+// ======== MORTALITY RATES API ========
+export const getMortalityRates = async (): Promise<ApiResponse<any[]>> => {
+  return apiRequest<any[]>(API_ENDPOINTS.MORTALITY_RATES.LIST);
+};
+
+export const addMortalityRate = async (rate: { age_group_start: number; age_group_end: number; rate: number }): Promise<ApiResponse<any>> => {
+  return apiRequest<any>(API_ENDPOINTS.MORTALITY_RATES.CREATE, {
+    method: 'POST',
+    body: JSON.stringify(rate)
+  });
+};
+
+export const updateMortalityRate = async (id: number, rate: { age_group_start: number; age_group_end: number; rate: number }): Promise<ApiResponse<any>> => {
+  return apiRequest<any>(API_ENDPOINTS.MORTALITY_RATES.UPDATE(id), {
+    method: 'PATCH',
+    body: JSON.stringify(rate)
+  });
+};
+
+export const deleteMortalityRate = async (id: number): Promise<ApiResponse<boolean>> => {
+  const response = await apiRequest<any>(API_ENDPOINTS.MORTALITY_RATES.DELETE(id), {
+    method: 'DELETE'
+  });
+  return {
+    ...response,
+    data: response.success
+  };
 }; 

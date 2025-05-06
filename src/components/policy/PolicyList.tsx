@@ -1,87 +1,185 @@
-import React from 'react';
-import { sampleData } from '@/utils/data';
+import React, { useState } from 'react';
 import {
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
-  TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Button } from '@/components/ui/button';
-import { Eye, Edit } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+  Paper,
+  IconButton,
+  Typography,
+  Box,
+  CircularProgress,
+  Collapse,
+} from '@mui/material';
+import {
+  Edit as EditIcon,
+  KeyboardArrowDown as ExpandMoreIcon,
+  KeyboardArrowUp as ExpandLessIcon,
+} from '@mui/icons-material';
+import { GSVRate, Policy, SSVConfig } from '@/types';
+
+// Updated types based on the actual API response
+
 
 interface PolicyListProps {
+  policies: Policy[];
+  onEdit: (policy: Policy) => void;
+  onRefresh: () => void;
+  loading: boolean;
   searchTerm: string;
-  onView: (policy: any) => void;
-  onEdit: ((policy: any) => void) | null;
+  onView: (policy: Policy) => void;
 }
 
-export const PolicyList = ({ searchTerm, onView, onEdit }: PolicyListProps) => {
-  const policies = sampleData.insurance_policies || [];
-  
-  const filteredPolicies = policies.filter(policy => 
-    policy.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    policy.policy_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    policy.policy_type.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+export const PolicyList: React.FC<PolicyListProps> = ({ 
+  policies, 
+  onEdit, 
+  onRefresh, 
+  loading, 
+  searchTerm, 
+  onView 
+}) => {
+  const [expandedPolicy, setExpandedPolicy] = useState<number | null>(null);
+
+  const handleExpandClick = (policyId: number) => {
+    setExpandedPolicy(expandedPolicy === policyId ? null : policyId);
+  };
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
-    <div>
-      {filteredPolicies.length === 0 ? (
-        <p className="text-center py-6 text-muted-foreground">
-          {searchTerm ? "No policies match your search." : "No policies available."}
-        </p>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Policy Name</TableHead>
-              <TableHead>Code</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Sum Assured Range</TableHead>
-              <TableHead>Interest Rate</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredPolicies.map((policy) => (
-              <TableRow key={policy.id}>
-                <TableCell className="font-medium">{policy.name}</TableCell>
+    <TableContainer component={Paper}>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell />
+            <TableCell>Policy Name</TableCell>
+            <TableCell>Policy Code</TableCell>
+            <TableCell>Type</TableCell>
+            <TableCell>Min Sum Assured</TableCell>
+            <TableCell>Max Sum Assured</TableCell>
+            <TableCell>Actions</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {policies.map((policy) => (
+            <React.Fragment key={policy.id}>
+              <TableRow>
+                <TableCell>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleExpandClick(policy.id)}
+                  >
+                    {expandedPolicy === policy.id ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                  </IconButton>
+                </TableCell>
+                <TableCell>{policy.name}</TableCell>
                 <TableCell>{policy.policy_code}</TableCell>
+                <TableCell>{policy.policy_type}</TableCell>
+                <TableCell>{policy.min_sum_assured}</TableCell>
+                <TableCell>{policy.max_sum_assured}</TableCell>
                 <TableCell>
-                  <Badge variant="outline">{policy.policy_type}</Badge>
-                </TableCell>
-                <TableCell>
-                  {Number(policy.min_sum_assured).toLocaleString()} - {Number(policy.max_sum_assured).toLocaleString()}
-                </TableCell>
-                <TableCell>{(Number(policy.guaranteed_interest_rate) * 100).toFixed(2)}%</TableCell>
-                <TableCell>
-                  <div className="flex space-x-2">
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => onView(policy)}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    {onEdit && (
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => onEdit(policy)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
+                  <IconButton onClick={() => onEdit(policy)}>
+                    <EditIcon />
+                  </IconButton>
                 </TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
-    </div>
+              <TableRow>
+                <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={7}>
+                  <Collapse in={expandedPolicy === policy.id} timeout="auto" unmountOnExit>
+                    <Box sx={{ margin: 2 }}>
+                      <Typography variant="h6" gutterBottom component="div">
+                        Policy Details
+                      </Typography>
+                      
+                      {/* GSV Rates Section */}
+                      <Typography variant="subtitle1" gutterBottom>
+                        GSV Rates
+                      </Typography>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>Min Year</TableCell>
+                            <TableCell>Max Year</TableCell>
+                            <TableCell>Rate</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {policy.gsv_rates?.map((rate: GSVRate) => (
+                            <TableRow key={rate.id}>
+                              <TableCell>{rate.min_year}</TableCell>
+                              <TableCell>{rate.max_year}</TableCell>
+                              <TableCell>{rate.rate}%</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+
+                      {/* SSV Configs Section */}
+                      <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
+                        SSV Configurations
+                      </Typography>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>Min Year</TableCell>
+                            <TableCell>Max Year</TableCell>
+                            <TableCell>Factor</TableCell>
+                            <TableCell>Eligibility Years</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {policy.ssv_configs?.map((config: SSVConfig) => (
+                            <TableRow key={config.id}>
+                              <TableCell>{config.min_year}</TableCell>
+                              <TableCell>{config.max_year}</TableCell>
+                              <TableCell>{config.ssv_factor}%</TableCell>
+                              <TableCell>{config.eligibility_years}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+
+                      {/* Additional Policy Details */}
+                      <Box sx={{ mt: 2 }}>
+                        <Typography variant="subtitle1" gutterBottom>
+                          Additional Information
+                        </Typography>
+                        <Typography variant="body2">
+                          Base Multiplier: {policy.base_multiplier}
+                        </Typography>
+                        <Typography variant="body2">
+                          Guaranteed Interest Rate: {parseFloat(policy.guaranteed_interest_rate) * 100}%
+                        </Typography>
+                        <Typography variant="body2">
+                          Terminal Bonus Rate: {parseFloat(policy.terminal_bonus_rate) * 100}%
+                        </Typography>
+                        <Typography variant="body2">
+                          ADB Included: {policy.include_adb ? 'Yes' : 'No'}
+                          {policy.include_adb && ` (${parseFloat(policy.adb_percentage) * 100}%)`}
+                        </Typography>
+                        <Typography variant="body2">
+                          PTD Included: {policy.include_ptd ? 'Yes' : 'No'}
+                          {policy.include_ptd && ` (${parseFloat(policy.ptd_percentage) * 100}%)`}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Collapse>
+                </TableCell>
+              </TableRow>
+            </React.Fragment>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
   );
 };
+
+export default PolicyList;

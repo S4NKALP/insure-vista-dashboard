@@ -23,11 +23,15 @@ export interface User {
   user_permissions?: any[];
 }
 
+
 export interface Branch {
   id: number;
   name: string;
   branch_code: number;
   location: string;
+  total_agents?: number;
+  total_policies?: number;
+  total_premium?:number;
   company: number;
   company_name: string;
   user?: number;
@@ -225,11 +229,13 @@ export interface GSVRate {
 }
 
 export interface SSVConfig {
+  id: number;
   min_year: number;
   max_year: number;
-  factor: string;
+  ssv_factor: string;
   eligibility_years: string;
   policy: number;
+  custom_condition?: string;
 }
 
 export interface UnderwritingData {

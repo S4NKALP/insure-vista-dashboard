@@ -22,7 +22,8 @@ interface NavItem {
   path: string;
   icon: React.ReactNode;
   label: string;
-  permission?: string;  
+  permission?: string;
+  roles?: string[];
 }
 
 interface SideNavbarProps {
@@ -33,24 +34,94 @@ export const SideNavbar: React.FC<SideNavbarProps> = ({ collapsed }) => {
   const { user } = useAuth();
   const { isSuperAdmin, isBranchAdmin, hasPermission } = usePermissions();
   
-  // Navigation items with permissions
+  // Navigation items with permissions and role-based visibility
   const navItems: NavItem[] = [
-    { path: '/dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
-    { path: '/agents', icon: <User size={20} />, label: 'Agents', permission: 'view_agents' },
-    { path: '/branches', icon: <Building size={20} />, label: 'Branches', permission: 'view_all_branches' },
-    { path: '/users', icon: <Users size={20} />, label: 'Users', permission: 'view_all_customers' },
-    { path: '/customers', icon: <Users size={20} />, label: 'Customers', permission: 'view_customers' },
-    { path: '/policies', icon: <FileText size={20} />, label: 'Insurance Policies', permission: 'view_policies' },
-    { path: '/policy-holders', icon: <FileText size={20} />, label: 'Policy Holders', permission: 'view_policy_holders' },
-    { path: '/loans', icon: <Banknote size={20} />, label: 'Loans', permission: 'view_loans' },
-    { path: '/claims', icon: <ClipboardCheck size={20} />, label: 'Claims', permission: 'view_claims' },
-    { path: '/payments', icon: <CreditCard size={20} />, label: 'Payments', permission: 'view_premium_payments' },
-    { path: '/reports', icon: <ChartBar size={20} />, label: 'Reports' },
-    { path: '/settings', icon: <Settings size={20} />, label: 'Settings', permission: 'manage_configuration' },
+    { 
+      path: '/dashboard', 
+      icon: <LayoutDashboard size={20} />, 
+      label: 'Dashboard' 
+    },
+    { 
+      path: '/agents', 
+      icon: <User size={20} />, 
+      label: 'Agents', 
+      permission: 'view_agents' 
+    },
+    { 
+      path: '/branches', 
+      icon: <Building size={20} />, 
+      label: 'Branches', 
+      permission: 'view_all_branches',
+      roles: ['superadmin']
+    },
+    { 
+      path: '/users', 
+      icon: <Users size={20} />, 
+      label: 'Users', 
+      permission: 'view_all_customers',
+      roles: ['superadmin'] 
+    },
+    { 
+      path: '/customers', 
+      icon: <Users size={20} />, 
+      label: 'Customers', 
+      permission: 'view_customers',
+      roles: ['branch']
+    },
+    { 
+      path: '/policies', 
+      icon: <FileText size={20} />, 
+      label: 'Insurance Policies', 
+      permission: 'view_policies' 
+    },
+    { 
+      path: '/policy-holders', 
+      icon: <FileText size={20} />, 
+      label: 'Policy Holders', 
+      permission: 'view_policy_holders' 
+    },
+    { 
+      path: '/loans', 
+      icon: <Banknote size={20} />, 
+      label: 'Loans', 
+      permission: 'view_loans' 
+    },
+    { 
+      path: '/claims', 
+      icon: <ClipboardCheck size={20} />, 
+      label: 'Claims', 
+      permission: 'view_claims' 
+    },
+    { 
+      path: '/payments', 
+      icon: <CreditCard size={20} />, 
+      label: 'Payments', 
+      permission: 'view_premium_payments' 
+    },
+    { 
+      path: '/reports', 
+      icon: <ChartBar size={20} />, 
+      label: 'Reports' 
+    },
+    { 
+      path: '/settings', 
+      icon: <Settings size={20} />, 
+      label: 'Settings', 
+      permission: 'manage_configuration',
+      roles: ['superadmin']
+    },
   ];
   
-  // Filter navigation items based on permissions
+  // Filter navigation items based on permissions and roles
   const filteredLinks = navItems.filter(item => {
+    // If specific roles are defined, check if the user has one of those roles
+    if (item.roles && item.roles.length > 0) {
+      const userRole = isSuperAdmin ? 'superadmin' : (isBranchAdmin ? 'branch' : user?.role);
+      if (!item.roles.includes(userRole as string)) {
+        return false;
+      }
+    }
+    
     // If no permission is required, show the item
     if (!item.permission) return true;
     

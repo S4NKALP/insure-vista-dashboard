@@ -136,6 +136,10 @@ export const API_ENDPOINTS = {
     DELETE: (id: number) => `/customers/${id}/`,
   },
 
+  //Policies
+
+  
+  
   // Premium Payments
   PREMIUM_PAYMENTS: {
     LIST: '/premium-payments/',
@@ -178,8 +182,16 @@ export const API_ENDPOINTS = {
     STATS: '/home/',
     UNDERWRITING: '/underwriting/',
   },
+
   
   // Miscellaneous
-  MORTALITY_RATES: '/mortality-rates/',
+  MORTALITY_RATES: {
+    LIST: '/mortality-rates/',
+    DETAIL: (id: number) => `/mortality-rates/${id}/`,
+    CREATE: '/mortality-rates/',
+    UPDATE: (id: number) => `/mortality-rates/${id}/`,
+    DELETE: (id: number) => `/mortality-rates/${id}/`,
+  },
   OCCUPATIONS: '/occupations/',
+
 }; 

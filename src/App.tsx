@@ -67,7 +67,7 @@ const App = () => (
               <Route path="/reports" element={<PrivateRoute><Reports /></PrivateRoute>} />
               
               {/* Branch Admin Routes */}
-              <Route path="/customers" element={<PrivateRoute allowedRoles={['superadmin', 'branch']}><UserManagement /></PrivateRoute>} />
+              <Route path="/customers" element={<PrivateRoute allowedRoles={[ 'branch']}><UserManagement /></PrivateRoute>} />
               <Route path="/loans" element={<PrivateRoute><LoanManagement /></PrivateRoute>} />
               
               {/* Error Pages */}

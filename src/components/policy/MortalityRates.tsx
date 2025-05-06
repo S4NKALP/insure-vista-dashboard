@@ -1,6 +1,4 @@
-
-import React, { useState } from 'react';
-import { sampleData } from '@/utils/data';
+import React, { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -10,24 +8,60 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
-import { Plus, Edit } from 'lucide-react';
+import { Plus, Edit, Trash2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { useToast } from '@/components/ui/use-toast';
+import { getMortalityRates, addMortalityRate, updateMortalityRate, deleteMortalityRate } from '@/api/mock/api';
+
+interface MortalityRate {
+  id: number;
+  age_group_start: number;
+  age_group_end: number;
+  rate: number;
+}
 
 export const MortalityRates = () => {
   const [isAdding, setIsAdding] = useState(false);
   const [isEditing, setIsEditing] = useState<number | null>(null);
+  const [mortalityRates, setMortalityRates] = useState<MortalityRate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
   
-  // Get mortality rates from the sample data
-  const mortalityRates = sampleData.mortality_rates || [];
-  
-  // Form state for adding/editing
   const [formData, setFormData] = useState({
     age_group_start: '',
     age_group_end: '',
     rate: ''
   });
-  
+
+  const fetchMortalityRates = async () => {
+    try {
+      setLoading(true);
+      const response = await getMortalityRates();
+      if (response.success && response.data) {
+        setMortalityRates(response.data);
+      } else {
+        toast({
+          title: "Error",
+          description: response.message || "Failed to fetch mortality rates",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch mortality rates",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMortalityRates();
+  }, []);
+
   const handleAddClick = () => {
     setIsAdding(true);
     setIsEditing(null);
@@ -37,28 +71,89 @@ export const MortalityRates = () => {
       rate: ''
     });
   };
-  
-  const handleEditClick = (rate: any) => {
+
+  const handleEditClick = (rate: MortalityRate) => {
     setIsEditing(rate.id);
     setIsAdding(false);
     setFormData({
       age_group_start: rate.age_group_start.toString(),
       age_group_end: rate.age_group_end.toString(),
-      rate: rate.rate
+      rate: rate.rate.toString()
     });
   };
-  
-  const handleSubmit = (e: React.FormEvent) => {
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Submitting data:', formData);
-    // Here you would save the data
-    setIsAdding(false);
-    setIsEditing(null);
+    try {
+      const rateData = {
+        age_group_start: parseInt(formData.age_group_start),
+        age_group_end: parseInt(formData.age_group_end),
+        rate: parseFloat(formData.rate)
+      };
+
+      let response;
+      if (isEditing !== null) {
+        response = await updateMortalityRate(isEditing, rateData);
+      } else {
+        response = await addMortalityRate(rateData);
+      }
+
+      if (response.success) {
+        toast({
+          title: "Success",
+          description: isEditing ? "Rate updated successfully" : "Rate added successfully",
+        });
+        fetchMortalityRates();
+        handleCancel();
+      } else {
+        toast({
+          title: "Error",
+          description: response.error || "Failed to save rate",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save rate",
+        variant: "destructive",
+      });
+    }
   };
-  
+
+  const handleDelete = async (id: number) => {
+    try {
+      const response = await deleteMortalityRate(id);
+      if (response.success) {
+        toast({
+          title: "Success",
+          description: "Rate deleted successfully",
+        });
+        fetchMortalityRates();
+      } else {
+        toast({
+          title: "Error",
+          description: response.message || "Failed to delete rate",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete rate",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleCancel = () => {
     setIsAdding(false);
     setIsEditing(null);
+    setFormData({
+      age_group_start: '',
+      age_group_end: '',
+      rate: ''
+    });
   };
 
   return (
@@ -137,7 +232,13 @@ export const MortalityRates = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {mortalityRates.length === 0 ? (
+          {loading ? (
+            <TableRow>
+              <TableCell colSpan={3} className="text-center">
+                Loading...
+              </TableCell>
+            </TableRow>
+          ) : mortalityRates.length === 0 ? (
             <TableRow>
               <TableCell colSpan={3} className="text-center text-muted-foreground">
                 No mortality rates defined yet.
@@ -148,13 +249,20 @@ export const MortalityRates = () => {
               <TableRow key={rate.id}>
                 <TableCell>{rate.age_group_start} - {rate.age_group_end} years</TableCell>
                 <TableCell>{rate.rate}</TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-right space-x-2">
                   <Button 
                     variant="ghost" 
                     size="icon" 
                     onClick={() => handleEditClick(rate)}
                   >
                     <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => handleDelete(rate.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </TableCell>
               </TableRow>

@@ -31,11 +31,7 @@ import {
   Search,
   Edit,
   Users,
-  ChartBar,
   Eye,
-  MapPin,
-  Phone,
-  Mail,
   FileCheck,
   DollarSign,
   AlertCircle,
@@ -44,7 +40,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from '@/lib/utils';
-import { Branch, ApiResponse, SalesAgent, AgentReport, PolicyHolder } from '@/types';
+import { Branch, SalesAgent, AgentReport, PolicyHolder } from '@/types';
 import { 
   getBranches, 
   addBranch, 
@@ -162,10 +158,7 @@ const BranchManagement = () => {
     staleTime: 2 * 60 * 1000, // Cache 2 mins
   });
 
-  const { 
-    data: viewPolicyHolders = [], 
-    isLoading: isLoadingViewPolicyHolders 
-  } = useQuery<PolicyHolder[], Error>({
+  useQuery<PolicyHolder[], Error>({
     queryKey: ['policyHolders', selectedBranch?.id],
     queryFn: () => fetchPolicyHoldersForBranch(selectedBranch?.id ?? null),
     enabled: !!selectedBranch && isViewBranchOpen,
@@ -182,17 +175,24 @@ const BranchManagement = () => {
     staleTime: 2 * 60 * 1000,
   });
   
-  // Calculate derived stats for the view dialog
-  const viewBranchStats = useMemo(() => {
-    const customers = new Set(viewPolicyHolders.map(p => p.customer?.id).filter(Boolean));
-    const totalPremium = viewPolicyHolders.reduce((sum, policy) => sum + parseFloat(policy.sum_assured || '0'), 0); // Using actual sum assured if available
-    return {
-      customerCount: customers.size,
-      policyCount: viewPolicyHolders.length,
-      agentCount: viewAgents.length,
-      totalPremium
-    };
-  }, [viewPolicyHolders, viewAgents]);
+  // Calculate total stats from all branches
+  const totalStats = useMemo(() => {
+    return branches.reduce((acc, branch) => {
+      return {
+        totalBranches: branches.length,
+        totalManagers: acc.totalManagers + (branch.user ? 1 : 0),
+        totalAgents: acc.totalAgents + (branch.total_agents || 0),
+        totalPolicies: acc.totalPolicies + (branch.total_policies || 0),
+        totalPremium: acc.totalPremium + (branch.total_premium || 0)
+      };
+    }, {
+      totalBranches: 0,
+      totalManagers: 0,
+      totalAgents: 0,
+      totalPolicies: 0,
+      totalPremium: 0
+    });
+  }, [branches]);
 
   // --- Mutations ---
   const addBranchMutation = useMutation({
@@ -200,7 +200,7 @@ const BranchManagement = () => {
     onSuccess: () => {
       toast.success("Branch added successfully");
       queryClient.invalidateQueries({ queryKey: ['branches'] }); // Refetch branches list
-        setIsAddBranchOpen(false);
+      setIsAddBranchOpen(false);
       resetBranchForm();
     },
     onError: (error: Error) => {
@@ -250,6 +250,7 @@ const BranchManagement = () => {
       company: branch.company || 1,
       company_name: branch.company_name || 'Easy Life Insurance LTD.',
       user: branch.user || null,
+      
     });
     setIsEditBranchOpen(true);
   };
@@ -314,12 +315,6 @@ const BranchManagement = () => {
     });
   };
 
-  // Calculate overall stats
-  const totalAgentsOverall = useMemo(() => branches.reduce((acc, branch) => acc + (branch.user ? 1 : 0), 0), [branches]); // Approximation based on assigned user
-  const totalPoliciesOverall = useMemo(() => viewPolicyHolders.length, [viewPolicyHolders]); // Need a way to get total policies if not viewing a branch
-  const totalPremiumOverall = useMemo(() => viewPolicyHolders.reduce((sum, policy) => sum + parseFloat(policy.sum_assured || '0'), 0), [viewPolicyHolders]); // Only for viewed branch currently
-
-
   // --- Render ---
   return (
     <DashboardLayout title="Branch Management">
@@ -346,38 +341,34 @@ const BranchManagement = () => {
               <Building className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              {isLoadingBranches ? <Skeleton className="h-7 w-1/2" /> : <div className="text-2xl font-bold">{branches.length}</div>}
+              {isLoadingBranches ? <Skeleton className="h-7 w-1/2" /> : <div className="text-2xl font-bold">{totalStats.totalBranches}</div>}
             </CardContent>
           </Card>
-          {/* Other stats cards need proper data sources */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Branch Managers</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-               {isLoadingBranches ? <Skeleton className="h-7 w-1/2" /> : <div className="text-2xl font-bold">{totalAgentsOverall}</div>}
-              <p className="text-xs text-muted-foreground">(Based on assigned users)</p>
+               {isLoadingBranches ? <Skeleton className="h-7 w-1/2" /> : <div className="text-2xl font-bold">{totalStats.totalManagers}</div>}
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Policies (Viewed Branch)</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Policies</CardTitle>
               <FileCheck className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-               {isLoadingViewPolicyHolders ? <Skeleton className="h-7 w-1/2" /> : <div className="text-2xl font-bold">{totalPoliciesOverall}</div>}
-               <p className="text-xs text-muted-foreground">(Requires endpoint for total)</p>
+               {isLoadingBranches ? <Skeleton className="h-7 w-1/2" /> : <div className="text-2xl font-bold">{totalStats.totalPolicies}</div>}
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Premium (Viewed Branch)</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Premium</CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              {isLoadingViewPolicyHolders ? <Skeleton className="h-7 w-1/2" /> : <div className="text-2xl font-bold">{formatCurrency(totalPremiumOverall)}</div>}
-              <p className="text-xs text-muted-foreground">(Requires endpoint for total)</p>
+              {isLoadingBranches ? <Skeleton className="h-7 w-1/2" /> : <div className="text-2xl font-bold">{formatCurrency(totalStats.totalPremium)}</div>}
             </CardContent>
           </Card>
         </div>
@@ -414,9 +405,9 @@ const BranchManagement = () => {
                 <TableHead>Name</TableHead>
                 <TableHead>Location</TableHead>
                 <TableHead>Manager</TableHead>
-                {/*<TableHead>Agents</TableHead> */}
-                {/*<TableHead>Policies</TableHead> */}
-                {/*<TableHead>Premium</TableHead> */}
+                <TableHead>Agents</TableHead>
+                <TableHead>Policies</TableHead>
+                <TableHead>Premium</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -425,12 +416,12 @@ const BranchManagement = () => {
               {isLoadingBranches ? (
                 [...Array(5)].map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={6}><Skeleton className="h-8 w-full" /></TableCell> 
+                    <TableCell colSpan={9}><Skeleton className="h-8 w-full" /></TableCell> 
                 </TableRow>
                 ))
               ) : filteredBranches.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center"> 
+                  <TableCell colSpan={9} className="h-24 text-center"> 
                     No branches found{searchTerm ? ' matching your search' : ''}.
                   </TableCell>
                 </TableRow>
@@ -441,9 +432,9 @@ const BranchManagement = () => {
                     <TableCell>{branch.name}</TableCell>
                     <TableCell>{branch.location}</TableCell>
                     <TableCell>{branch.user_details?.first_name} {branch.user_details?.last_name || 'N/A'}</TableCell>
-                    {/* <TableCell>{branch.total_agents}</TableCell> */}
-                    {/* <TableCell>{branch.total_policies}</TableCell> */}
-                    {/* <TableCell>{formatCurrency(parseFloat(branch.total_premium))}</TableCell> */}
+                    <TableCell>{branch.total_agents || 0}</TableCell>
+                    <TableCell>{branch.total_policies || 0}</TableCell>
+                    <TableCell>{formatCurrency(branch.total_premium || 0)}</TableCell>
                     <TableCell>
                       <Badge variant={branch.user_details?.is_active ? "default" : "outline"}>
                         {branch.user_details?.is_active ? 'Active' : 'Inactive'} {/* Assuming status based on manager */}
@@ -594,25 +585,25 @@ const BranchManagement = () => {
               {/* Overview Tab */}
               <TabsContent value="overview" className="space-y-4 pt-4">
                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                   {isLoadingViewPolicyHolders || isLoadingViewAgents ? (
+                   {isLoadingBranches ? (
                      [...Array(4)].map((_,i) => <Skeleton key={i} className="h-24 w-full" />)
                    ) : (
                       <>
                         <Card>
                           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Customers</CardTitle></CardHeader>
-                          <CardContent><div className="text-2xl font-bold">{viewBranchStats.customerCount}</div></CardContent>
+                          <CardContent><div className="text-2xl font-bold">{selectedBranch.total_policies || 0}</div></CardContent>
                         </Card>
                         <Card>
                           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Policies</CardTitle></CardHeader>
-                          <CardContent><div className="text-2xl font-bold">{viewBranchStats.policyCount}</div></CardContent>
+                          <CardContent><div className="text-2xl font-bold">{selectedBranch.total_policies || 0}</div></CardContent>
                         </Card>
                         <Card>
                           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Agents</CardTitle></CardHeader>
-                          <CardContent><div className="text-2xl font-bold">{viewBranchStats.agentCount}</div></CardContent>
+                          <CardContent><div className="text-2xl font-bold">{selectedBranch.total_agents || 0}</div></CardContent>
                         </Card>
                         <Card>
                           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Total Premium</CardTitle></CardHeader>
-                          <CardContent><div className="text-2xl font-bold">{formatCurrency(viewBranchStats.totalPremium)}</div></CardContent>
+                          <CardContent><div className="text-2xl font-bold">{formatCurrency(selectedBranch.total_premium || 0)}</div></CardContent>
                         </Card>
                       </>
                    )}
