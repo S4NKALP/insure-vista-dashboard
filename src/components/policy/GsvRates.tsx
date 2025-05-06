@@ -41,7 +41,7 @@ export const GsvRates = () => {
       try {
         const [policiesResponse, gsvRatesResponse] = await Promise.all([
           getPolicies(),
-          getGSVRates(0, {} as GSVRate) // You might need to adjust this based on your API
+          getGSVRates(0)
         ]);
 
         if (policiesResponse.success && policiesResponse.data) {
@@ -102,7 +102,7 @@ export const GsvRates = () => {
 
       if (response.success) {
         // Refresh the GSV rates list
-        const gsvRatesResponse = await getGSVRates(0, {} as GSVRate);
+        const gsvRatesResponse = await getGSVRates(0);
         if (gsvRatesResponse.success && gsvRatesResponse.data) {
           setGsvRates(Array.isArray(gsvRatesResponse.data) ? gsvRatesResponse.data : [gsvRatesResponse.data]);
         }

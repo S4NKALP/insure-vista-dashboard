@@ -143,29 +143,31 @@ const PolicyForm: React.FC<PolicyFormProps> = ({ open, onClose, onSubmit, policy
     }
   };
 
-  // In the handleAddSsvConfig function
-const handleAddSsvConfig = async () => {
-  if (!newSsvConfig.min_year || !newSsvConfig.max_year || !newSsvConfig.ssv_factor || !newSsvConfig.eligibility_years) return;
+  const handleAddSsvConfig = async () => {
+    if (!newSsvConfig.min_year || !newSsvConfig.max_year || !newSsvConfig.ssv_factor || !newSsvConfig.eligibility_years) return;
 
-  try {
-    // You're missing the policyId parameter here
-    const response = await addSSVConfig(policy?.id || 0, {
-      ...newSsvConfig,
-    } as Omit<SSVConfig, "id" | "policy">);
-
-    if (response.success && response.data) {
-      setSsvConfigs(prev => [...prev, response.data]);
-      setNewSsvConfig({
-        min_year: 0,
-        max_year: 0,
-        ssv_factor: '',
-        eligibility_years: '',
+    try {
+      const response = await addSSVConfig(policy?.id || 0, {
+        min_year: Number(newSsvConfig.min_year),
+        max_year: Number(newSsvConfig.max_year),
+        ssv_factor: newSsvConfig.ssv_factor,
+        eligibility_years: Number(newSsvConfig.eligibility_years),
+        custom_condition: newSsvConfig.custom_condition || ''
       });
+
+      if (response.success && response.data) {
+        setSsvConfigs(prev => [...prev, response.data]);
+        setNewSsvConfig({
+          min_year: 0,
+          max_year: 0,
+          ssv_factor: '',
+          eligibility_years: '',
+        });
+      }
+    } catch (error) {
+      console.error('Error adding SSV config:', error);
     }
-  } catch (error) {
-    console.error('Error adding SSV config:', error);
-  }
-};
+  };
 
   const handleDeleteGsvRate = async (id: number) => {
     try {
