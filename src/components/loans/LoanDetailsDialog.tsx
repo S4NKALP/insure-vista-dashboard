@@ -1,45 +1,88 @@
-
 import React from 'react';
-import { format } from 'date-fns';
+import { useQuery } from '@tanstack/react-query';
 import { 
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/utils';
-import { Check, X } from 'lucide-react';
+import { getLoanById, getLoanRepayments } from '@/api/mock/api';
+import { Loan } from '@/types';
 
 interface LoanDetailsDialogProps {
-  loan: any;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  canEdit: boolean;
+  loanId: number;
 }
 
-export const LoanDetailsDialog: React.FC<LoanDetailsDialogProps> = ({
-  loan,
-  open,
+export const LoanDetailsDialog: React.FC<LoanDetailsDialogProps> = ({ 
+  open, 
   onOpenChange,
-  canEdit
+  loanId 
 }) => {
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <Badge variant="outline" className="bg-yellow-100">Pending</Badge>;
-      case 'approved':
-        return <Badge variant="outline" className="bg-green-100">Approved</Badge>;
-      case 'rejected':
-        return <Badge variant="outline" className="bg-red-100">Rejected</Badge>;
-      case 'completed':
-        return <Badge variant="outline" className="bg-blue-100">Completed</Badge>;
+  const { data: loanData, isLoading: isLoadingLoan } = useQuery({
+    queryKey: ['loan', loanId],
+    queryFn: async () => {
+      const response = await getLoanById(loanId);
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch loan details');
+      }
+      return response.data as Loan;
+    },
+    enabled: open && !!loanId,
+  });
+
+  const { data: repaymentsData, isLoading: isLoadingRepayments } = useQuery({
+    queryKey: ['loanRepayments', loanId],
+    queryFn: async () => {
+      const response = await getLoanRepayments();
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to fetch loan repayments');
+      }
+      return response.data;
+    },
+    enabled: open && !!loanId,
+  });
+
+  if (isLoadingLoan || isLoadingRepayments) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <div className="flex items-center justify-center p-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  if (!loanData) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <div className="text-center p-8">
+            <p className="text-destructive">Failed to load loan details</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'active':
+        return 'bg-green-100 text-green-800';
+      case 'paid':
+        return 'bg-blue-100 text-blue-800';
+      case 'defaulted':
+        return 'bg-red-100 text-red-800';
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -47,147 +90,132 @@ export const LoanDetailsDialog: React.FC<LoanDetailsDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="flex justify-between items-center">
-            <span>Loan Details - {loan.id}</span>
-            {getStatusBadge(loan.status)}
-          </DialogTitle>
+          <DialogTitle>Loan Details</DialogTitle>
           <DialogDescription>
-            Information about loan {loan.id} for {loan.policyHolder}
+            View detailed information about loan #{loanData.id}
           </DialogDescription>
         </DialogHeader>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <h3 className="text-sm font-medium mb-2">Basic Information</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Policy Holder:</span>
-                <span className="font-medium">{loan.policyHolder}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Policy ID:</span>
-                <span className="font-medium">{loan.policyId}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Loan Type:</span>
-                <span className="font-medium">{loan.loanType}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Amount:</span>
-                <span className="font-medium">{formatCurrency(loan.amount)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Interest Rate:</span>
-                <span className="font-medium">{loan.interestRate}%</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Branch:</span>
-                <span className="font-medium">{loan.branch}</span>
-              </div>
-            </div>
+
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">Customer Information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <dl className="space-y-2">
+                  <div>
+                    <dt className="text-sm text-muted-foreground">Policy Holder Number</dt>
+                    <dd className="font-medium">{loanData.policy_holder_number}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm text-muted-foreground">Customer Name</dt>
+                    <dd className="font-medium">{loanData.customer_name}</dd>
+                  </div>
+                </dl>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">Loan Status</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <dl className="space-y-2">
+                  <div>
+                    <dt className="text-sm text-muted-foreground">Status</dt>
+                    <dd>
+                      <Badge className={getStatusColor(loanData.loan_status)}>
+                        {loanData.loan_status}
+                      </Badge>
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm text-muted-foreground">Created Date</dt>
+                    <dd className="font-medium">{loanData.created_at}</dd>
+                  </div>
+                </dl>
+              </CardContent>
+            </Card>
           </div>
-          
-          <div>
-            <h3 className="text-sm font-medium mb-2">Status Information</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Request Date:</span>
-                <span className="font-medium">{format(new Date(loan.requestDate), 'dd MMM yyyy')}</span>
-              </div>
-              {loan.approvalDate && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Approval Date:</span>
-                  <span className="font-medium">{format(new Date(loan.approvalDate), 'dd MMM yyyy')}</span>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">Loan Details</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <dl className="grid grid-cols-2 gap-4">
+                <div>
+                  <dt className="text-sm text-muted-foreground">Original Amount</dt>
+                  <dd className="text-lg font-semibold">
+                    {formatCurrency(parseFloat(loanData.loan_amount))}
+                  </dd>
                 </div>
-              )}
-              {loan.rejectionDate && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Rejection Date:</span>
-                  <span className="font-medium">{format(new Date(loan.rejectionDate), 'dd MMM yyyy')}</span>
+                <div>
+                  <dt className="text-sm text-muted-foreground">Remaining Balance</dt>
+                  <dd className="text-lg font-semibold">
+                    {formatCurrency(parseFloat(loanData.remaining_balance))}
+                  </dd>
                 </div>
-              )}
-              {loan.completionDate && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Completion Date:</span>
-                  <span className="font-medium">{format(new Date(loan.completionDate), 'dd MMM yyyy')}</span>
+                <div>
+                  <dt className="text-sm text-muted-foreground">Interest Rate</dt>
+                  <dd className="text-lg font-semibold">{loanData.interest_rate}%</dd>
                 </div>
-              )}
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Reason:</span>
-                <span className="font-medium">{loan.reason}</span>
-              </div>
-              {loan.rejectionReason && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Rejection Reason:</span>
-                  <span className="font-medium text-red-600">{loan.rejectionReason}</span>
+                <div>
+                  <dt className="text-sm text-muted-foreground">Accrued Interest</dt>
+                  <dd className="text-lg font-semibold text-amber-600">
+                    {formatCurrency(parseFloat(loanData.accrued_interest))}
+                  </dd>
                 </div>
-              )}
-            </div>
-          </div>
-        </div>
-        
-        {(loan.status === 'approved' || loan.status === 'completed') && (
-          <>
-            <Separator className="my-4" />
-            <div>
-              <h3 className="text-sm font-medium mb-2">Repayment Information</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Original Amount:</span>
-                  <span className="font-medium">{formatCurrency(loan.amount)}</span>
+                <div>
+                  <dt className="text-sm text-muted-foreground">Last Interest Date</dt>
+                  <dd className="font-medium">{loanData.last_interest_date}</dd>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Amount Due:</span>
-                  <span className="font-medium">{formatCurrency(loan.amountDue || loan.amount)}</span>
+                <div>
+                  <dt className="text-sm text-muted-foreground">Last Updated</dt>
+                  <dd className="font-medium">{loanData.updated_at}</dd>
                 </div>
-              </div>
-              
-              {loan.repayments && loan.repayments.length > 0 ? (
-                <div className="mt-4">
-                  <h4 className="text-xs font-medium mb-2">Repayment History</h4>
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-2">Date</th>
-                        <th className="text-right py-2">Amount</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {loan.repayments.map((repayment: any) => (
-                        <tr key={repayment.id} className="border-b">
-                          <td className="py-2">{format(new Date(repayment.date), 'dd MMM yyyy')}</td>
-                          <td className="py-2 text-right">{formatCurrency(repayment.amount)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              </dl>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">Repayment History</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {repaymentsData && repaymentsData.length > 0 ? (
+                <div className="space-y-4">
+                  {repaymentsData.map((repayment: any) => (
+                    <div 
+                      key={repayment.id}
+                      className="flex items-center justify-between p-4 border rounded-lg"
+                    >
+                      <div>
+                        <p className="font-medium">
+                          {formatCurrency(parseFloat(repayment.amount))}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {repayment.repayment_date} - {repayment.repayment_type}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-muted-foreground">Remaining Balance</p>
+                        <p className="font-medium">
+                          {formatCurrency(parseFloat(repayment.remaining_loan_balance))}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : (
-                <div className="mt-4 text-center text-muted-foreground text-sm">
-                  No repayments recorded yet
-                </div>
+                <p className="text-center text-muted-foreground py-4">
+                  No repayment history available
+                </p>
               )}
-            </div>
-          </>
-        )}
-        
-        <DialogFooter>
-          {loan.status === 'pending' && canEdit && (
-            <>
-              <Button variant="outline" className="bg-green-100 hover:bg-green-200 text-green-700">
-                <Check className="mr-2 h-4 w-4" />
-                Approve
-              </Button>
-              <Button variant="outline" className="bg-red-100 hover:bg-red-200 text-red-700">
-                <X className="mr-2 h-4 w-4" />
-                Reject
-              </Button>
-            </>
-          )}
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Close
-          </Button>
-        </DialogFooter>
+            </CardContent>
+          </Card>
+        </div>
       </DialogContent>
     </Dialog>
   );

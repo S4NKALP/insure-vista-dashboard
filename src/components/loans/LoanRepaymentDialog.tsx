@@ -3,6 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { toast } from 'sonner';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Dialog,
   DialogContent,
@@ -23,22 +24,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatCurrency } from '@/lib/utils';
+import { addLoanRepayment } from '@/api/mock/api';
+import { Loan } from '@/types';
 
 interface LoanRepaymentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  loan: {
-    id: number;
-    policy_holder_number: string;
-    customer_name: string;
-    loan_amount: string;
-    remaining_balance: string;
-    interest_rate: string;
-    accrued_interest: string;
-    last_interest_date: string;
-    loan_status: string;
-    policy_holder: number;
-  };
+  loan: Loan;
 }
 
 const formSchema = z.object({
@@ -46,9 +38,6 @@ const formSchema = z.object({
     .min(1, { message: 'Amount is required' })
     .refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
       message: 'Amount must be a positive number'
-    })
-    .refine((val) => Number(val) <= Number(formSchema.shape.remaining_balance), {
-      message: 'Amount cannot exceed remaining balance'
     }),
   repayment_type: z.string().min(1, { message: 'Repayment type is required' }),
 });
@@ -58,6 +47,7 @@ export const LoanRepaymentDialog: React.FC<LoanRepaymentDialogProps> = ({
   onOpenChange,
   loan 
 }) => {
+  const queryClient = useQueryClient();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -66,20 +56,57 @@ export const LoanRepaymentDialog: React.FC<LoanRepaymentDialogProps> = ({
     },
   });
 
+  // Add custom validation for amount
+  const validateAmount = (value: string) => {
+    const amount = parseFloat(value);
+    const remainingBalance = parseFloat(loan.remaining_balance);
+    return amount <= remainingBalance;
+  };
+
+  const addRepaymentMutation = useMutation({
+    mutationFn: async (values: z.infer<typeof formSchema>) => {
+      // Validate amount before making the API call
+      if (!validateAmount(values.amount)) {
+        throw new Error('Amount cannot exceed remaining balance');
+      }
+
+      const response = await addLoanRepayment({
+        loan_id: loan.id,
+        policy_holder_number: loan.policy_holder_number,
+        repayment_date: new Date().toISOString().split('T')[0],
+        amount: values.amount,
+        repayment_type: values.repayment_type,
+        remaining_loan_balance: (
+          parseFloat(loan.remaining_balance) - parseFloat(values.amount)
+        ).toString(),
+        loan: loan.id
+      });
+      
+      if (!response.success) {
+        throw new Error(response.message || 'Failed to record loan repayment');
+      }
+      
+      return response.data;
+    },
+    onSuccess: () => {
+      // Invalidate and refetch loans and repayments
+      queryClient.invalidateQueries({ queryKey: ['loans'] });
+      queryClient.invalidateQueries({ queryKey: ['loanRepayments'] });
+      
+      // Show success message
+      toast.success('Loan repayment recorded successfully');
+      
+      // Close the dialog and reset the form
+      onOpenChange(false);
+      form.reset();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to record loan repayment');
+    }
+  });
+
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    // In a real app, this would make an API call
-    console.log('Submitting loan repayment:', {
-      ...values,
-      loan_id: loan.id,
-      policy_holder_number: loan.policy_holder_number,
-    });
-    
-    // Show success message
-    toast.success('Loan repayment recorded successfully');
-    
-    // Close the dialog and reset the form
-    onOpenChange(false);
-    form.reset();
+    addRepaymentMutation.mutate(values);
   };
 
   return (
@@ -171,10 +198,20 @@ export const LoanRepaymentDialog: React.FC<LoanRepaymentDialogProps> = ({
             </div>
 
             <DialogFooter>
-              <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
+              <Button 
+                variant="outline" 
+                type="button" 
+                onClick={() => onOpenChange(false)}
+                disabled={addRepaymentMutation.isPending}
+              >
                 Cancel
               </Button>
-              <Button type="submit">Record Payment</Button>
+              <Button 
+                type="submit"
+                disabled={addRepaymentMutation.isPending}
+              >
+                {addRepaymentMutation.isPending ? 'Recording...' : 'Record Payment'}
+              </Button>
             </DialogFooter>
           </form>
         </Form>
