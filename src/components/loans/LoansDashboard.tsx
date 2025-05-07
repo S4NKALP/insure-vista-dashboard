@@ -44,9 +44,12 @@ const fetchRepayments = async (): Promise<LoanRepayment[]> => {
 
 // --- Helper Functions ---
 const calculateLoanStatistics = (loans: Loan[] = [], repayments: LoanRepayment[] = []) => {
+  // Active loans calculation
   const activeLoans = loans.filter(loan => loan.loan_status === 'Active');
-  const totalActiveLoansAmount = activeLoans.reduce((total, loan) => total + parseFloat(loan.loan_amount || '0'), 0);
+  const totalActiveLoansAmount = activeLoans.reduce((total, loan) => 
+    total + parseFloat(loan.loan_amount || '0'), 0);
 
+  // Monthly repayments calculation
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
@@ -55,13 +58,17 @@ const calculateLoanStatistics = (loans: Loan[] = [], repayments: LoanRepayment[]
     const repaymentDate = new Date(repayment.repayment_date);
     return repaymentDate.getMonth() === currentMonth && repaymentDate.getFullYear() === currentYear;
   });
-  const totalRepaymentsThisMonth = repaymentsThisMonth.reduce((total, repayment) => total + parseFloat(repayment.amount || '0'), 0);
+  const totalRepaymentsThisMonth = repaymentsThisMonth.reduce((total, repayment) => 
+    total + parseFloat(repayment.amount || '0'), 0);
 
+  // Pending loans count
   const pendingLoansCount = loans.filter(loan => loan.loan_status === 'Pending').length;
 
+  // Monthly loan disbursement data
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const monthlyLoanMap = new Map<string, number>();
   monthNames.forEach(month => monthlyLoanMap.set(month, 0));
+
   loans.forEach(loan => {
     try {
       const creationDate = new Date(loan.created_at);
@@ -74,27 +81,31 @@ const calculateLoanStatistics = (loans: Loan[] = [], repayments: LoanRepayment[]
   });
   const monthlyLoanData = Array.from(monthlyLoanMap).map(([name, amount]) => ({ name, amount }));
 
-  // Placeholder - needs real data or logic for loan types
+  // Loan type distribution (based on policy loans since that's what we have)
   const loanTypeData = [
-    { name: 'Policy Loans', value: totalActiveLoansAmount > 0 ? totalActiveLoansAmount : 0 },
-    { name: 'Mortgage Loans', value: 0 }, 
-    { name: 'Personal Loans', value: 0 }
-  ].filter(d => d.value > 0); // Only show types with value
-  if (loanTypeData.length === 0 && loans.length > 0) {
-    loanTypeData.push({ name: 'Unknown Type', value: totalActiveLoansAmount });
-  } else if (loanTypeData.length === 0 && loans.length === 0) {
-     loanTypeData.push({ name: 'No Data', value: 1 }); // Placeholder for empty chart
-  }
+    { 
+      name: 'Policy Loans', 
+      value: loans.reduce((total, loan) => total + parseFloat(loan.loan_amount || '0'), 0)
+    }
+  ];
 
+  // Loan status distribution
   const statusDistribution = new Map<string, number>();
-  ['Active', 'Pending', 'Completed', 'Rejected'].forEach(status => statusDistribution.set(status, 0)); // Initialize all statuses
+  ['Active', 'Pending', 'Paid', 'Defaulted'].forEach(status => statusDistribution.set(status, 0));
+  
   loans.forEach(loan => {
     const status = loan.loan_status || 'Unknown';
     const count = statusDistribution.get(status) || 0;
     statusDistribution.set(status, count + 1);
   });
-  const loanStatusData = Array.from(statusDistribution).map(([name, value]) => ({ name, value }));
-  if(loans.length === 0) loanStatusData.push({ name: 'No Data', value: 1 });
+
+  const loanStatusData = Array.from(statusDistribution)
+    .map(([name, value]) => ({ name, value }))
+    .filter(item => item.value > 0); // Only show statuses that have loans
+
+  if (loanStatusData.length === 0) {
+    loanStatusData.push({ name: 'No Data', value: 1 });
+  }
 
   return {
     totalActiveLoans: activeLoans.length,

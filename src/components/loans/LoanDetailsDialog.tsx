@@ -7,7 +7,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/utils';
@@ -17,56 +16,35 @@ import { Loan } from '@/types';
 interface LoanDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  loanId: number;
+  loan: Loan;
+  canEdit: boolean;
 }
 
 export const LoanDetailsDialog: React.FC<LoanDetailsDialogProps> = ({ 
   open, 
   onOpenChange,
-  loanId 
+  loan,
+  canEdit
 }) => {
-  const { data: loanData, isLoading: isLoadingLoan } = useQuery({
-    queryKey: ['loan', loanId],
-    queryFn: async () => {
-      const response = await getLoanById(loanId);
-      if (!response.success) {
-        throw new Error(response.message || 'Failed to fetch loan details');
-      }
-      return response.data as Loan;
-    },
-    enabled: open && !!loanId,
-  });
-
   const { data: repaymentsData, isLoading: isLoadingRepayments } = useQuery({
-    queryKey: ['loanRepayments', loanId],
+    queryKey: ['loanRepayments', loan.id],
     queryFn: async () => {
       const response = await getLoanRepayments();
       if (!response.success) {
         throw new Error(response.message || 'Failed to fetch loan repayments');
       }
-      return response.data;
+      // Filter repayments for this specific loan
+      return response.data.filter((repayment: any) => repayment.loan_id === loan.id);
     },
-    enabled: open && !!loanId,
+    enabled: open,
   });
 
-  if (isLoadingLoan || isLoadingRepayments) {
+  if (isLoadingRepayments) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent>
           <div className="flex items-center justify-center p-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-
-  if (!loanData) {
-    return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent>
-          <div className="text-center p-8">
-            <p className="text-destructive">Failed to load loan details</p>
           </div>
         </DialogContent>
       </Dialog>
@@ -92,7 +70,7 @@ export const LoanDetailsDialog: React.FC<LoanDetailsDialogProps> = ({
         <DialogHeader>
           <DialogTitle>Loan Details</DialogTitle>
           <DialogDescription>
-            View detailed information about loan #{loanData.id}
+            View detailed information about loan #{loan.id}
           </DialogDescription>
         </DialogHeader>
 
@@ -106,11 +84,11 @@ export const LoanDetailsDialog: React.FC<LoanDetailsDialogProps> = ({
                 <dl className="space-y-2">
                   <div>
                     <dt className="text-sm text-muted-foreground">Policy Holder Number</dt>
-                    <dd className="font-medium">{loanData.policy_holder_number}</dd>
+                    <dd className="font-medium">{loan.policy_holder_number}</dd>
                   </div>
                   <div>
                     <dt className="text-sm text-muted-foreground">Customer Name</dt>
-                    <dd className="font-medium">{loanData.customer_name}</dd>
+                    <dd className="font-medium">{loan.customer_name}</dd>
                   </div>
                 </dl>
               </CardContent>
@@ -125,14 +103,14 @@ export const LoanDetailsDialog: React.FC<LoanDetailsDialogProps> = ({
                   <div>
                     <dt className="text-sm text-muted-foreground">Status</dt>
                     <dd>
-                      <Badge className={getStatusColor(loanData.loan_status)}>
-                        {loanData.loan_status}
+                      <Badge className={getStatusColor(loan.loan_status)}>
+                        {loan.loan_status}
                       </Badge>
                     </dd>
                   </div>
                   <div>
                     <dt className="text-sm text-muted-foreground">Created Date</dt>
-                    <dd className="font-medium">{loanData.created_at}</dd>
+                    <dd className="font-medium">{loan.created_at}</dd>
                   </div>
                 </dl>
               </CardContent>
@@ -148,32 +126,32 @@ export const LoanDetailsDialog: React.FC<LoanDetailsDialogProps> = ({
                 <div>
                   <dt className="text-sm text-muted-foreground">Original Amount</dt>
                   <dd className="text-lg font-semibold">
-                    {formatCurrency(parseFloat(loanData.loan_amount))}
+                    {formatCurrency(parseFloat(loan.loan_amount))}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-sm text-muted-foreground">Remaining Balance</dt>
                   <dd className="text-lg font-semibold">
-                    {formatCurrency(parseFloat(loanData.remaining_balance))}
+                    {formatCurrency(parseFloat(loan.remaining_balance))}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-sm text-muted-foreground">Interest Rate</dt>
-                  <dd className="text-lg font-semibold">{loanData.interest_rate}%</dd>
+                  <dd className="text-lg font-semibold">{loan.interest_rate}%</dd>
                 </div>
                 <div>
                   <dt className="text-sm text-muted-foreground">Accrued Interest</dt>
                   <dd className="text-lg font-semibold text-amber-600">
-                    {formatCurrency(parseFloat(loanData.accrued_interest))}
+                    {formatCurrency(parseFloat(loan.accrued_interest))}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-sm text-muted-foreground">Last Interest Date</dt>
-                  <dd className="font-medium">{loanData.last_interest_date}</dd>
+                  <dd className="font-medium">{loan.last_interest_date}</dd>
                 </div>
                 <div>
                   <dt className="text-sm text-muted-foreground">Last Updated</dt>
-                  <dd className="font-medium">{loanData.updated_at}</dd>
+                  <dd className="font-medium">{loan.updated_at}</dd>
                 </div>
               </dl>
             </CardContent>

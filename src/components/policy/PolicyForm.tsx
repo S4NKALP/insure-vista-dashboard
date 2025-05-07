@@ -143,6 +143,7 @@ const PolicyForm: React.FC<PolicyFormProps> = ({ open, onClose, onSubmit, policy
     }
   };
 
+  // In the handleAddSsvConfig function
   const handleAddSsvConfig = async () => {
     if (!newSsvConfig.min_year || !newSsvConfig.max_year || !newSsvConfig.ssv_factor || !newSsvConfig.eligibility_years) return;
 
